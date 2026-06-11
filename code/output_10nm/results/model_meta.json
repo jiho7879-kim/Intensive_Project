@@ -1,0 +1,65 @@
+{
+  "node": "10nm",
+  "n_samples": 375,
+  "model_name": "Random Forest",
+  "cv5_r2": 0.3856781227872646,
+  "cv5_std": 0.02239505804106322,
+  "cv5_rmse": 0.12335209339039575,
+  "cv5_mae": 0.10429308647750365,
+  "best_params": {
+    "n_estimators": 200,
+    "min_samples_split": 2,
+    "min_samples_leaf": 1,
+    "max_features": 0.7,
+    "max_depth": 4
+  },
+  "features": [
+    "etch_rate",
+    "pressure",
+    "temperature",
+    "exposure_time",
+    "focus_offset",
+    "dose",
+    "deposition_rate",
+    "thickness_uniformity",
+    "implant_energy",
+    "tilt_angle",
+    "critical_dimension",
+    "oxide_thickness",
+    "resistivity",
+    "defect_count",
+    "vth",
+    "leakage_current",
+    "resistance",
+    "defect_composite",
+    "cd_vth_product",
+    "uniformity_x_defect"
+  ],
+  "xai_top5": [
+    {
+      "feature": "vth",
+      "Ensemble": 0.9729269242152639
+    },
+    {
+      "feature": "critical_dimension",
+      "Ensemble": 0.7331357238818973
+    },
+    {
+      "feature": "cd_vth_product",
+      "Ensemble": 0.43366887027015516
+    },
+    {
+      "feature": "defect_count",
+      "Ensemble": 0.41031929294589364
+    },
+    {
+      "feature": "thickness_uniformity",
+      "Ensemble": 0.40443802517092947
+    }
+  ],
+  "phase_r2": {
+    "phase1": 0.3709228455752779,
+    "phase2": 0.3856781227872646,
+    "phase3": 0.3785367744028513
+  }
+}

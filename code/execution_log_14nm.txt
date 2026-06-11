@@ -1,0 +1,143 @@
+═════════════════════════════════════════════════════════════════
+  노드 집중 분석 파이프라인  —  [14nm]
+  XGBoost : XGBoost
+  LightGBM: LightGBM
+  CatBoost: CatBoost
+═════════════════════════════════════════════════════════════════
+실행 단계: ['§1 EDA (노드 내부)', '§2 Baseline (23개)', '§3 Tuning', '§4 Ensemble', '§5 진단', '§6 EDA 비교', '§7 요약+XAI']
+
+▶ 데이터 로드 [14nm]...
+
+  노드 [14nm] 데이터: 250개
+  CV Folds: 5 (샘플 250개 기준)
+  피처셋: A=18개  B=17개  C=20개  D=23개
+  ※ 제외된 노드 상수 컬럼: ['tech_encoded', 'is_advanced_node', 'node_x_cd']
+  사용 피처셋: A=18  B=17  C=20  D=23
+
+═════════════════════════════════════════════════════════════════
+  §1  EDA — [14nm] 노드 내부 분석
+═════════════════════════════════════════════════════════════════
+
+  수율 통계: μ=0.3419  σ=0.0928  min=0.1481  max=0.7594  IQR=0.1230
+  Shapiro-Wilk: W=0.9529, p=0.0000 (비정규 α=0.05)
+  FS-A: R²=0.3049
+  FS-B: R²=0.3067
+  FS-C: R²=0.2852
+  FS-D: R²=0.2879
+  다중공선성 쌍 (|r|>0.8): 3개
+  → sec1_eda_14nm.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (4s)
+
+═════════════════════════════════════════════════════════════════
+  §2  Phase 1 — [14nm] 베이스라인 스크리닝 (23개 모델)
+═════════════════════════════════════════════════════════════════
+
+  Model                          R² mean   R² std     RMSE
+  ──────────────────────────────────────────────────────────
+  Linear Regression              -0.0153   0.1713   0.0913
+  Ridge                           0.0270   0.1326   0.0894
+  Lasso                           0.0413   0.1310   0.0888
+  ElasticNet                      0.0312   0.1309   0.0893
+  PLS (n=5)                       0.0194   0.1253   0.0898
+  Huber                          -0.0040   0.1444   0.0912
+  Bayesian Ridge                  0.0597   0.1102   0.0882
+  TheilSen                       -0.0469   0.1480   0.0932
+  Kernel Ridge                   -0.4856   0.2839   0.1125
+  RANSAC+Ridge                   -0.0778   0.0967   0.0939
+  SVR (RBF)                      -0.0971   0.2664   0.0941
+  NuSVR                          -0.2984   0.3192   0.1028
+  KNN (k=5)                      -0.1945   0.2472   0.0981
+  MLP (128-64)                   -1.5048   0.5492   0.1428
+  Decision Tree                  -0.0334   0.3522   0.0894
+  Bagging (DT)                    0.2465   0.1824   0.0777
+  Random Forest                   0.2621   0.1640   0.0770
+  Extra Trees                     0.1865   0.1848   0.0808
+  AdaBoost                        0.1761   0.1387   0.0820
+  Gradient Boosting               0.1809   0.2091   0.0809
+  XGBoost                         0.1709   0.1965   0.0814
+  LightGBM                       -0.0807   0.3023   0.0932
+  CatBoost                        0.1690   0.1516   0.0824
+  → sec2_baseline_14nm.png
+  → phase1_results.csv
+  → sec2_phase1.json
+  ✅ Step 2 완료 (23s)
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — [14nm] 하이퍼파라미터 튜닝
+═════════════════════════════════════════════════════════════════
+
+  Baseline R²:
+    Random Forest                   : 0.2621
+    Gradient Boosting               : 0.1809
+    AdaBoost                        : 0.1761
+    XGBoost                         : 0.1709
+    CatBoost                        : 0.1690
+    LightGBM                        : -0.0807
+
+  [Gradient Boosting] Baseline=0.1809 (n_iter=30)... search=0.1794  5CV=0.2092±0.1641  [5s]
+    best_params: {'subsample': 0.8, 'n_estimators': 50, 'min_samples_leaf': 4, 'max_features': 'sqrt', 'max_depth': 2, 'learning_rate': 0.1}
+
+  [Random Forest] Baseline=0.2621 (n_iter=25)... search=0.1498  5CV=0.2520±0.1713  [8s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 0.7, 'max_depth': 4}
+  → sec3_tuning_results.json
+  → sec3_tuning_14nm.png
+  ✅ Step 3 완료 (20s)
+
+═════════════════════════════════════════════════════════════════
+  §4  Phase 3 — [14nm] 고급 앙상블
+═════════════════════════════════════════════════════════════════
+  기반 학습기 Top3: ['Random Forest', 'Gradient Boosting']
+  Voting (Top3)                 : R²=0.2416±0.1619
+  Stacking (Top3→Ridge)         : R²=0.1205±0.0632
+  → sec4_leaderboard_14nm.png
+  → sec4_adv_results.json
+  → sec4_leaderboard.csv
+  ✅ Step 4 완료 (4s)
+
+═════════════════════════════════════════════════════════════════
+  §5  최종 모델 진단 — [14nm]
+═════════════════════════════════════════════════════════════════
+  최종 모델: Random Forest
+  Train R²=0.5830  CV R²=0.2520
+  잔차: μ=-0.0009  σ=0.0599  Shapiro p=0.0001
+  → sec5_diagnostics_14nm.png
+  ✅ Step 5 완료 (2s)
+
+═════════════════════════════════════════════════════════════════
+  §6  EDA 피처셋 반영 효과 비교 — [14nm]
+═════════════════════════════════════════════════════════════════
+  ❌ Step 6 오류: HistGradientBoostingRegressor.__init__() got an unexpected keyword argument 'n_estimators'
+
+═════════════════════════════════════════════════════════════════
+  §7  최종 선정 요약 — [14nm]
+═════════════════════════════════════════════════════════════════
+
+  ★ Best Model: Random Forest
+  CV R²=0.2520  std=0.1713
+  RMSE=0.0778  MAE=0.0638
+  best_params: {'n_estimators': 200, 'min_samples_split': 2, 'min_samples_leaf': 1, 'max_features': 0.7, 'max_depth': 4}
+
+  XAI: Permutation Importance 계산 중... 완료
+
+  [14nm] XAI 상위 피처:
+     1. critical_dimension        0.9722  ████████████████████████
+     2. thickness_uniformity      0.4348  ██████████
+     3. cd_vth_product            0.4249  ██████████
+     4. oxide_thickness           0.4107  ██████████
+     5. defect_count              0.3795  █████████
+     6. uniformity_x_defect       0.3631  █████████
+     7. defect_composite          0.3357  ████████
+     8. vth                       0.2857  ███████
+  → sec7_summary_14nm.png
+  → xai_results_14nm.csv
+  → model_meta.json
+  ✅ Step 7 완료 (7s)
+
+═════════════════════════════════════════════════════════════════
+  [14nm] 분석 완료 (60s)
+  출력 디렉토리: output_14nm/
+  figures : 6개
+  results : 8개
+  best_model_14nm.pkl : ✅
+═════════════════════════════════════════════════════════════════

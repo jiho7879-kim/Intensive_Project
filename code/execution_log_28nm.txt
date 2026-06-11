@@ -1,0 +1,150 @@
+═════════════════════════════════════════════════════════════════
+  노드 집중 분석 파이프라인  —  [28nm]
+  XGBoost : XGBoost
+  LightGBM: LightGBM
+  CatBoost: CatBoost
+═════════════════════════════════════════════════════════════════
+실행 단계: ['§1 EDA (노드 내부)', '§2 Baseline (23개)', '§3 Tuning', '§4 Ensemble', '§5 진단', '§6 EDA 비교', '§7 요약+XAI']
+
+▶ 데이터 로드 [28nm]...
+
+  노드 [28nm] 데이터: 300개
+  CV Folds: 5 (샘플 300개 기준)
+  피처셋: A=18개  B=17개  C=20개  D=23개
+  ※ 제외된 노드 상수 컬럼: ['tech_encoded', 'is_advanced_node', 'node_x_cd']
+  사용 피처셋: A=18  B=17  C=20  D=23
+
+═════════════════════════════════════════════════════════════════
+  §1  EDA — [28nm] 노드 내부 분석
+═════════════════════════════════════════════════════════════════
+
+  수율 통계: μ=0.3445  σ=0.0868  min=0.1498  max=0.7225  IQR=0.1264
+  Shapiro-Wilk: W=0.9647, p=0.0000 (비정규 α=0.05)
+  FS-A: R²=0.1737
+  FS-B: R²=0.1691
+  FS-C: R²=0.1774
+  FS-D: R²=0.1819
+  다중공선성 쌍 (|r|>0.8): 3개
+  → sec1_eda_28nm.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (5s)
+
+═════════════════════════════════════════════════════════════════
+  §2  Phase 1 — [28nm] 베이스라인 스크리닝 (23개 모델)
+═════════════════════════════════════════════════════════════════
+
+  Model                          R² mean   R² std     RMSE
+  ──────────────────────────────────────────────────────────
+  Linear Regression               0.0797   0.1770   0.0823
+  Ridge                           0.0632   0.1696   0.0830
+  Lasso                           0.0788   0.1500   0.0824
+  ElasticNet                      0.0685   0.1593   0.0828
+  PLS (n=5)                       0.0603   0.1673   0.0831
+  Huber                           0.0540   0.1995   0.0833
+  Bayesian Ridge                  0.0855   0.1216   0.0821
+  TheilSen                        0.0076   0.1738   0.0853
+  Kernel Ridge                   -0.6755   0.2958   0.1113
+  RANSAC+Ridge                   -0.0930   0.2463   0.0894
+  SVR (RBF)                       0.0859   0.0653   0.0823
+  NuSVR                          -0.2114   0.1217   0.0944
+  KNN (k=5)                      -0.0057   0.1109   0.0861
+  MLP (128-64)                   -1.4572   0.6768   0.1339
+  Decision Tree                  -0.3537   0.1482   0.0996
+  Bagging (DT)                    0.1289   0.1166   0.0801
+  Random Forest                   0.1201   0.1254   0.0804
+  Extra Trees                     0.1047   0.1367   0.0811
+  AdaBoost                        0.1585   0.1275   0.0787
+  Gradient Boosting               0.0954   0.1778   0.0814
+  XGBoost                         0.0330   0.1864   0.0844
+  LightGBM                        0.0173   0.1747   0.0852
+  CatBoost                        0.1469   0.1198   0.0792
+  → sec2_baseline_28nm.png
+  → phase1_results.csv
+  → sec2_phase1.json
+  ✅ Step 2 완료 (26s)
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — [28nm] 하이퍼파라미터 튜닝
+═════════════════════════════════════════════════════════════════
+
+  Baseline R²:
+    AdaBoost                        : 0.1585
+    CatBoost                        : 0.1469
+    Random Forest                   : 0.1201
+    Gradient Boosting               : 0.0954
+    XGBoost                         : 0.0330
+    LightGBM                        : 0.0173
+
+  [Gradient Boosting] Baseline=0.0954 (n_iter=30)... search=0.0996  5CV=0.1728±0.1161  [10s]
+    best_params: {'subsample': 0.9, 'n_estimators': 100, 'min_samples_leaf': 2, 'max_features': 'sqrt', 'max_depth': 2, 'learning_rate': 0.05}
+
+  [Random Forest] Baseline=0.1201 (n_iter=25)... search=0.0858  5CV=0.1397±0.1051  [13s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 'log2', 'max_depth': 8}
+  → sec3_tuning_results.json
+  → sec3_tuning_28nm.png
+  ✅ Step 3 완료 (30s)
+
+═════════════════════════════════════════════════════════════════
+  §4  Phase 3 — [28nm] 고급 앙상블
+═════════════════════════════════════════════════════════════════
+  기반 학습기 Top3: ['Gradient Boosting', 'Random Forest']
+  Voting (Top3)                 : R²=0.1648±0.1077
+  Stacking (Top3→Ridge)         : R²=0.0672±0.0413
+  → sec4_leaderboard_28nm.png
+  → sec4_adv_results.json
+  → sec4_leaderboard.csv
+  ✅ Step 4 완료 (7s)
+
+═════════════════════════════════════════════════════════════════
+  §5  최종 모델 진단 — [28nm]
+═════════════════════════════════════════════════════════════════
+  최종 모델: Gradient Boosting
+  Train R²=0.5154  CV R²=0.1728
+  잔차: μ=-0.0002  σ=0.0604  Shapiro p=0.0000
+  → sec5_diagnostics_28nm.png
+  ✅ Step 5 완료 (2s)
+
+═════════════════════════════════════════════════════════════════
+  §6  EDA 피처셋 반영 효과 비교 — [28nm]
+═════════════════════════════════════════════════════════════════
+
+  피처셋별 R² [28nm]:
+                A-원본   B-EDA제거  C-EDA+FE★
+Model                                    
+Best Model  0.179789  0.194095   0.172794
+RF          0.165870  0.149765   0.133717
+  → sec6_feature_compare_28nm.png
+  ✅ Step 6 완료 (14s)
+
+═════════════════════════════════════════════════════════════════
+  §7  최종 선정 요약 — [28nm]
+═════════════════════════════════════════════════════════════════
+
+  ★ Best Model: Gradient Boosting
+  CV R²=0.1728  std=0.1161
+  RMSE=0.0780  MAE=0.0654
+  best_params: {'subsample': 0.9, 'n_estimators': 100, 'min_samples_leaf': 2, 'max_features': 'sqrt', 'max_depth': 2, 'learning_rate': 0.05}
+
+  XAI: Permutation Importance 계산 중... 완료
+
+  [28nm] XAI 상위 피처:
+     1. critical_dimension        0.9304  ███████████████████████
+     2. cd_vth_product            0.8904  ██████████████████████
+     3. thickness_uniformity      0.6539  ████████████████
+     4. vth                       0.6284  ███████████████
+     5. defect_count              0.4569  ███████████
+     6. uniformity_x_defect       0.4359  ██████████
+     7. defect_composite          0.3848  █████████
+     8. oxide_thickness           0.3834  █████████
+  → sec7_summary_28nm.png
+  → xai_results_28nm.csv
+  → model_meta.json
+  ✅ Step 7 완료 (3s)
+
+═════════════════════════════════════════════════════════════════
+  [28nm] 분석 완료 (86s)
+  출력 디렉토리: output_28nm/
+  figures : 7개
+  results : 8개
+  best_model_28nm.pkl : ✅
+═════════════════════════════════════════════════════════════════

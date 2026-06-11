@@ -1,0 +1,75 @@
+{
+  "model_name": "Gradient Boosting",
+  "cv5_r2": 0.6755,
+  "cv5_rmse": 0.0997,
+  "cv5_mae": 0.0825,
+  "cv5_std": 0.0237,
+  "features": [
+    "etch_rate",
+    "pressure",
+    "temperature",
+    "exposure_time",
+    "focus_offset",
+    "dose",
+    "deposition_rate",
+    "thickness_uniformity",
+    "implant_energy",
+    "tilt_angle",
+    "critical_dimension",
+    "oxide_thickness",
+    "resistivity",
+    "defect_count",
+    "vth",
+    "leakage_current",
+    "resistance",
+    "tech_encoded",
+    "is_advanced_node",
+    "defect_composite",
+    "cd_vth_product",
+    "uniformity_x_defect",
+    "node_x_cd"
+  ],
+  "le_classes": [
+    "10nm",
+    "14nm",
+    "22nm",
+    "28nm",
+    "7nm"
+  ],
+  "best_params": {
+    "n_estimators": 100,
+    "learning_rate": 0.05,
+    "max_depth": 2,
+    "subsample": 0.9,
+    "min_samples_leaf": 2,
+    "max_features": 0.9
+  },
+  "node_performance": {
+    "7nm": {
+      "R2": 0.4259420113046829,
+      "RMSE": 0.1128445529134533,
+      "n": 200
+    },
+    "10nm": {
+      "R2": 0.4993967523151328,
+      "RMSE": 0.11208687598861257,
+      "n": 375
+    },
+    "14nm": {
+      "R2": 0.44956876733037077,
+      "RMSE": 0.06882498353985073,
+      "n": 250
+    },
+    "22nm": {
+      "R2": 0.3586282081226938,
+      "RMSE": 0.07346031229462996,
+      "n": 125
+    },
+    "28nm": {
+      "R2": 0.37247871053364967,
+      "RMSE": 0.06873016461287618,
+      "n": 300
+    }
+  },
+  "feature_set": "C-EDA+FE (23\uac1c)"
+}

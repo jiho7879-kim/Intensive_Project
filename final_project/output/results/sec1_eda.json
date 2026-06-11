@@ -1,0 +1,54 @@
+{
+  "fs_r2": {
+    "A": 0.6614822472930844,
+    "B": 0.6613145922663354,
+    "C": 0.6660688082532463,
+    "D": 0.6647459939255373
+  },
+  "t_stat": 35.080052592258205,
+  "t_p": 3.609226817319985e-188,
+  "f_stat": 307.480550724723,
+  "f_p": 5.529836966473621e-184,
+  "high_corr_pairs": [
+    [
+      "thickness_uniformity",
+      "defect_count",
+      0.9551541207481237
+    ],
+    [
+      "thickness_uniformity",
+      "defect_density",
+      0.9996489723894028
+    ],
+    [
+      "critical_dimension",
+      "oxide_thickness",
+      0.7201205700919934
+    ],
+    [
+      "defect_count",
+      "defect_density",
+      0.9555439432895547
+    ]
+  ],
+  "outlier_pct": {
+    "etch_rate": 0.5599999999999999,
+    "pressure": 0.48,
+    "temperature": 0.4,
+    "exposure_time": 0.88,
+    "focus_offset": 0.48,
+    "dose": 0.64,
+    "deposition_rate": 0.8,
+    "thickness_uniformity": 0.64,
+    "implant_energy": 0.4,
+    "tilt_angle": 0.48,
+    "critical_dimension": 0.0,
+    "oxide_thickness": 0.08,
+    "resistivity": 1.1199999999999999,
+    "defect_count": 0.5599999999999999,
+    "defect_density": 0.72,
+    "vth": 0.24,
+    "leakage_current": 4.4799999999999995,
+    "resistance": 0.16
+  }
+}

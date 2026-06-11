@@ -1,0 +1,35 @@
+{
+  "Gradient Boosting": {
+    "baseline_r2": -0.23986645896247963,
+    "search_best_r2": 0.06891466704350686,
+    "cv5_r2": 0.009416191997922874,
+    "cv5_std": 0.15821700777231487,
+    "cv5_rmse": 0.08710534791145379,
+    "cv5_mae": 0.07294638614618147,
+    "best_params": {
+      "subsample": 0.7,
+      "n_estimators": 200,
+      "min_samples_leaf": 1,
+      "max_features": 0.7,
+      "max_depth": 2,
+      "learning_rate": 0.01
+    },
+    "elapsed": 1.0008010864257812
+  },
+  "Random Forest": {
+    "baseline_r2": -0.08716072956299359,
+    "search_best_r2": 0.07469410639566994,
+    "cv5_r2": -0.0359065835116265,
+    "cv5_std": 0.16663759754354343,
+    "cv5_rmse": 0.08872275666486441,
+    "cv5_mae": 0.07516450473697468,
+    "best_params": {
+      "n_estimators": 200,
+      "min_samples_split": 5,
+      "min_samples_leaf": 2,
+      "max_features": "sqrt",
+      "max_depth": 4
+    },
+    "elapsed": 2.0715456008911133
+  }
+}

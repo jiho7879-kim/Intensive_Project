@@ -1,0 +1,66 @@
+{
+  "node": "28nm",
+  "n_samples": 300,
+  "model_name": "Gradient Boosting",
+  "cv5_r2": 0.17279393187193817,
+  "cv5_std": 0.11613833088059294,
+  "cv5_rmse": 0.07798522915957389,
+  "cv5_mae": 0.06537434653683824,
+  "best_params": {
+    "subsample": 0.9,
+    "n_estimators": 100,
+    "min_samples_leaf": 2,
+    "max_features": "sqrt",
+    "max_depth": 2,
+    "learning_rate": 0.05
+  },
+  "features": [
+    "etch_rate",
+    "pressure",
+    "temperature",
+    "exposure_time",
+    "focus_offset",
+    "dose",
+    "deposition_rate",
+    "thickness_uniformity",
+    "implant_energy",
+    "tilt_angle",
+    "critical_dimension",
+    "oxide_thickness",
+    "resistivity",
+    "defect_count",
+    "vth",
+    "leakage_current",
+    "resistance",
+    "defect_composite",
+    "cd_vth_product",
+    "uniformity_x_defect"
+  ],
+  "xai_top5": [
+    {
+      "feature": "critical_dimension",
+      "Ensemble": 0.9303910708399957
+    },
+    {
+      "feature": "cd_vth_product",
+      "Ensemble": 0.8903681146090605
+    },
+    {
+      "feature": "thickness_uniformity",
+      "Ensemble": 0.6539416145756484
+    },
+    {
+      "feature": "vth",
+      "Ensemble": 0.6283949598433057
+    },
+    {
+      "feature": "defect_count",
+      "Ensemble": 0.4568655263948352
+    }
+  ],
+  "phase_r2": {
+    "phase1": 0.1584683044778667,
+    "phase2": 0.17279393187193817,
+    "phase3": 0.16483284954428007
+  }
+}

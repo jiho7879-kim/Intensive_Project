@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>반도체 노드별 수율 분산 분해 분석</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=IBM+Plex+Sans+KR:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg:          #0a0e14;
+    --surface:     #0f1520;
+    --surface2:    #141c2a;
+    --border:      #1e2d44;
+    --accent:      #00d4ff;
+    --accent2:     #ff6b35;
+    --green:       #00e676;
+    --yellow:      #ffd740;
+    --red:         #ff1744;
+    --purple:      #7c4dff;
+    --text:        #e0eaf8;
+    --text-dim:    #5a7599;
+    --text-muted:  #3a5068;
+    /* node colors */
+    --c7nm:   #00d4ff;
+    --c10nm:  #00e676;
+    --c14nm:  #ffd740;
+    --c22nm:  #ff6b35;
+    --c28nm:  #ff1744;
+    /* explained decomposition colors */
+    --col-linear:    #1565c0;
+    --col-nonlinear: #0097a7;
+    --col-tool:      #558b2f;
+    --col-unexpl:    #1a2340;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans KR', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── 배경 그리드 ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 36px 28px;
+  }
+
+  /* ── 헤더 ── */
+  .header {
+    border-left: 3px solid var(--accent);
+    padding-left: 18px;
+    margin-bottom: 40px;
+  }
+  .header .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: .18em;
+    color: var(--accent);
+    text-transform: uppercase;
+    opacity: .8;
+    margin-bottom: 6px;
+  }
+  .header h1 {
+    font-size: 26px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -.01em;
+    margin-bottom: 6px;
+  }
+  .header h1 span { color: var(--accent); }
+  .header p {
+    color: var(--text-dim); font-size: 13px;
+  }
+
+  /* ── 섹션 타이틀 ── */
+  .sec-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: .14em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin: 36px 0 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sec-title::after {
+    content: ''; flex: 1; height: 1px;
+    background: var(--border);
+  }
+
+  /* ── 경고 배너 ── */
+  .alert-bar {
+    background: linear-gradient(135deg, #1a1000, #2a1800);
+    border: 1px solid #ff6b35;
+    border-left: 4px solid #ff6b35;
+    border-radius: 6px;
+    padding: 12px 18px;
+    margin-bottom: 28px;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .alert-bar .icon { color: var(--accent2); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-bar p { color: #e0a060; font-size: 12.5px; }
+  .alert-bar strong { color: #ffd740; }
+
+  /* ── KPI 그리드 ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 14px 14px;
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+    transition: border-color .2s, transform .15s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); }
+  .kpi-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--node-color);
+  }
+  .kpi-card .node-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    color: var(--node-color);
+    letter-spacing: .06em;
+    margin-bottom: 8px;
+  }
+  .kpi-card .sample {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px; font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi-card .sample-label {
+    font-size: 10px; color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+  .kpi-card .sigma-row {
+    display: flex; justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .kpi-card .sigma-val { color: var(--text); font-weight: 600; }
+
+  /* 미설명 % 게이지 */
+  .unexpl-pct {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 28px; font-weight: 700;
+    color: var(--accent2);
+    line-height: 1;
+    margin: 10px 0 2px;
+  }
+  .unexpl-pct.warn { color: var(--red); }
+  .unexpl-label { font-size: 10px; color: var(--text-dim); }
+
+  /* ── 메인 분산 분해 차트 ── */
+  .decomp-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  .decomp-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 14px;
+    position: relative;
+  }
+  .decomp-card .node-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    color: var(--node-color);
+    margin-bottom: 6px;
+  }
+  .decomp-card .best-r2 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+  .decomp-card .best-r2 span {
+    color: var(--node-color); font-weight: 600;
+  }
+
+  /* 스택 바 */
+  .stack-bar {
+    width: 100%; height: 28px;
+    display: flex; border-radius: 4px; overflow: hidden;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .stack-seg {
+    height: 100%;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    transition: filter .2s;
+    min-width: 0;
+  }
+  .stack-seg:hover { filter: brightness(1.25); }
+  .stack-seg .seg-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; font-weight: 600;
+    color: rgba(255,255,255,.85);
+    white-space: nowrap;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* 범례 */
+  .stack-legend {
+    display: flex; flex-direction: column; gap: 5px;
+    margin-top: 10px;
+  }
+  .leg-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--text-dim);
+  }
+  .leg-dot {
+    width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+  }
+  .leg-val {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ── 피처별 기여 차트 ── */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  .feat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 14px;
+  }
+  .feat-card .node-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; font-weight: 700;
+    color: var(--node-color);
+    margin-bottom: 12px;
+  }
+  .feat-row {
+    margin-bottom: 7px;
+  }
+  .feat-name-row {
+    display: flex; justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .feat-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 75%;
+  }
+  .feat-r2-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px; color: var(--text);
+    font-weight: 600;
+  }
+  .feat-bar-track {
+    width: 100%; height: 5px;
+    background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .feat-bar-fill {
+    height: 100%; border-radius: 3px;
+    transition: width .6s ease;
+  }
+
+  /* ── 방법론 비교 차트 ── */
+  .method-wrap {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  .method-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 14px;
+  }
+  .method-card .node-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; font-weight: 700;
+    color: var(--node-color);
+    margin-bottom: 12px;
+  }
+  .method-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 7px;
+  }
+  .method-name {
+    font-size: 10px; color: var(--text-dim);
+    width: 90px; flex-shrink: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .method-bar-track {
+    flex: 1; height: 8px;
+    background: var(--border); border-radius: 4px; overflow: hidden;
+  }
+  .method-bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width .6s ease;
+  }
+  .method-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    color: var(--text);
+    width: 42px; text-align: right; flex-shrink: 0;
+  }
+  .method-val.best { color: var(--green); }
+  .method-val.neg  { color: var(--text-muted); }
+
+  /* ── 결론 패널 ── */
+  .conclusion-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .conc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 20px 18px;
+  }
+  .conc-card.warn {
+    border-color: #ff6b35;
+    background: linear-gradient(135deg, #140d00, #1a1200);
+  }
+  .conc-card.info {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, #001520, #002030);
+  }
+  .conc-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: .08em;
+    margin-bottom: 12px;
+  }
+  .conc-card.warn .conc-title { color: var(--accent2); }
+  .conc-card.info .conc-title { color: var(--accent); }
+  .conc-list { list-style: none; }
+  .conc-list li {
+    font-size: 12px; color: #9ab0c8;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    padding-left: 14px;
+    position: relative;
+  }
+  .conc-list li::before {
+    content: '▸';
+    position: absolute; left: 0;
+    color: var(--text-muted); font-size: 10px;
+  }
+  .conc-list li:last-child { border-bottom: none; }
+  .conc-list li strong { color: var(--text); }
+
+  /* ── 노드별 미설명 강도 시각화 ── */
+  .radar-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .radar-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: .1em;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    align-self: flex-start;
+  }
+
+  /* ── footer ── */
+  .footer {
+    margin-top: 48px;
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--text-muted);
+  }
+
+  /* ── 애니메이션 ── */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in {
+    animation: fadeSlideUp .5s ease both;
+  }
+  .delay-1 { animation-delay: .05s; }
+  .delay-2 { animation-delay: .10s; }
+  .delay-3 { animation-delay: .15s; }
+  .delay-4 { animation-delay: .20s; }
+  .delay-5 { animation-delay: .25s; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- 헤더 -->
+  <div class="header animate-in">
+    <div class="tag">Semiconductor Yield Analysis · Variance Decomposition</div>
+    <h1>노드별 수율 분산 <span>설명 가능성</span> 분석</h1>
+    <p>현재 보유 피처로 설명 가능한 분산 vs 미포착 분산 — 5개 Technology Node 전수 분석</p>
+  </div>
+
+  <!-- 경고 배너 -->
+  <div class="alert-bar animate-in">
+    <div class="icon">⚠</div>
+    <p>
+      <strong>핵심 결론:</strong>
+      전 노드에서 수율 분산의 <strong>61~85%</strong>가 현재 데이터로 설명되지 않습니다.
+      이는 알고리즘 문제가 아닌 <strong>미측정 변수의 지배</strong>에 기인합니다 —
+      챔버 컨디션, 포토마스크 상태, 웨이퍼 결정 방향, 온도 이력, 오염 입자 크기 분포 등.
+      22nm는 샘플 부족(n=125)이 과적합을 가중하는 복합 원인입니다.
+    </p>
+  </div>
+
+  <!-- ① KPI 카드 -->
+  <div class="sec-title">01 / NODE OVERVIEW</div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- ② 분산 분해 스택 바 -->
+  <div class="sec-title">02 / VARIANCE DECOMPOSITION — 수율 분산 1.0 = 설명 + 미설명</div>
+  <div class="decomp-grid" id="decompGrid"></div>
+
+  <!-- ③ 단일 피처 기여도 -->
+  <div class="sec-title">03 / TOP FEATURE CONTRIBUTION — 단일 피처 Pearson r²</div>
+  <div class="feat-grid" id="featGrid"></div>
+
+  <!-- ④ 방법론 비교 -->
+  <div class="sec-title">04 / METHOD COMPARISON — 분석 방법별 달성 R²</div>
+  <div class="method-wrap" id="methodGrid"></div>
+
+  <!-- ⑤ SVG 종합 비교 -->
+  <div class="sec-title">05 / SUMMARY — 전체 노드 한눈에 보기</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:8px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;">
+      <div class="radar-title">설명 가능 분산 비율 (Best R²)</div>
+      <canvas id="barCanvas" width="550" height="220"></canvas>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;">
+      <div class="radar-title">미설명 분산 = 미측정 변수의 지배력</div>
+      <canvas id="circleCanvas" width="550" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- ⑥ 결론 -->
+  <div class="sec-title">06 / INTERPRETATION</div>
+  <div class="conclusion-grid">
+    <div class="conc-card warn">
+      <div class="conc-title">▸ WHY UNEXPLAINED IS HIGH</div>
+      <ul class="conc-list">
+        <li><strong>챔버 컨디션 (Chamber Condition)</strong> — 동일 파라미터라도 챔버 내벽 오염도, 플라즈마 균일성이 배치마다 다름</li>
+        <li><strong>포토마스크 상태 (Mask Degradation)</strong> — 마스크 노후화에 따른 선폭 변화는 로트 단위로 누적</li>
+        <li><strong>웨이퍼 결정 방향 편차</strong> — 동일 로트 내에서도 웨이퍼 간 결정 방향 오차가 존재</li>
+        <li><strong>온도 이력 (Thermal History)</strong> — 전 공정 누적 열 이력은 현재 데이터에 미포함</li>
+        <li><strong>오염 입자 분포</strong> — 결함 수(defect_count)는 포착되지만 크기·위치 분포는 미측정</li>
+        <li><strong>설비 간 마이크로 차이</strong> — 동일 모델 설비라도 개체 간 미세 편차 존재</li>
+      </ul>
+    </div>
+    <div class="conc-card info">
+      <div class="conc-title">▸ ACTIONABLE RECOMMENDATIONS</div>
+      <ul class="conc-list">
+        <li><strong>22nm 최우선:</strong> 현재 n=125 → 최소 500개 이상 수집 시 R² 0.4+ 기대</li>
+        <li><strong>챔버 상태 지표 추가:</strong> 챔버 클리닝 이후 누적 RF 시간, 내벽 온도 편차</li>
+        <li><strong>마스크 이력 피처:</strong> 마스크 사용 횟수, 마지막 검사 이후 경과 로트 수</li>
+        <li><strong>웨이퍼 ID 연계:</strong> 동일 잉곳(Ingot) 내 위치 정보로 결정 방향 편차 추정</li>
+        <li><strong>공정 이력 집계:</strong> 전 N개 공정 step의 이탈 횟수 누적 피처 생성</li>
+        <li><strong>인라인 계측 확대:</strong> 현재 최종 수율만 있는 구조 → 중간 검사 데이터 연계</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- footer -->
+  <div class="footer">
+    <span>Variance Decomposition Analysis · Semiconductor Yield ML Pipeline</span>
+    <span>5 Nodes · 1,250 Wafers · 18 Process Features</span>
+  </div>
+
+</div>
+
+<script>
+// ─── 데이터 ─────────────────────────────────────────────────────
+const DATA = {
+  "7nm":  { n:200,  sigma:0.1489, best_r2:0.1861, unexplained:0.814,
+             linear_contrib:0.041,  nonlinear_contrib:0.137, tool_contrib:0.004,  unexpl:0.814,
+             top_feat:"thickness_uniformity", top_r2:0.1371,
+             feat_r2:{"thickness_uniformity":0.1371,"defect_density":0.1356,"vth":0.1271,"defect_count":0.1162,"oxide_thickness":0.0139,"critical_dimension":0.0120},
+             methods:{"단일 피처\n(최고 r²)":0.137,"Top3+Ridge":0.120,"Ridge (전체)":0.041,"GBM (전체)":0.178,"SelectK5+GBM":0.186,"PLS 1comp":0.110}
+           },
+  "10nm": { n:375,  sigma:0.1584, best_r2:0.3859, unexplained:0.614,
+             linear_contrib:0.207,  nonlinear_contrib:0.170, tool_contrib:0.002,  unexpl:0.614,
+             top_feat:"vth", top_r2:0.1383,
+             feat_r2:{"vth":0.1383,"thickness_uniformity":0.1239,"defect_density":0.1233,"defect_count":0.1123,"critical_dimension":0.0692,"etch_rate":0.0312},
+             methods:{"단일 피처\n(최고 r²)":0.138,"Top3+Ridge":0.190,"Ridge (전체)":0.207,"GBM (전체)":0.377,"SelectK5+GBM":0.386,"PLS 1comp":0.220}
+           },
+  "14nm": { n:250,  sigma:0.0928, best_r2:0.3051, unexplained:0.695,
+             linear_contrib:0.021,  nonlinear_contrib:0.284, tool_contrib:0.000,  unexpl:0.695,
+             top_feat:"defect_count", top_r2:0.0861,
+             feat_r2:{"defect_count":0.0861,"thickness_uniformity":0.0859,"defect_density":0.0849,"critical_dimension":0.0762,"vth":0.0475,"oxide_thickness":0.0301},
+             methods:{"단일 피처\n(최고 r²)":0.086,"Top3+Ridge":0.042,"Ridge (전체)":0.021,"GBM (전체)":0.305,"SelectK5+GBM":0.166,"PLS 1comp":0.060}
+           },
+  "22nm": { n:125,  sigma:0.0917, best_r2:0.1503, unexplained:0.850,
+             linear_contrib:0.000,  nonlinear_contrib:0.000, tool_contrib:0.000,  unexpl:0.850,
+             top_feat:"defect_count", top_r2:0.1503,
+             feat_r2:{"defect_count":0.1503,"defect_density":0.1368,"thickness_uniformity":0.1353,"vth":0.0578,"oxide_thickness":0.0532,"critical_dimension":0.0401},
+             methods:{"단일 피처\n(최고 r²)":0.150,"Top3+Ridge":-0.032,"Ridge (전체)":-0.052,"GBM (전체)":-0.141,"SelectK5+GBM":-0.060,"PCA10+Ridge":0.021}
+           },
+  "28nm": { n:300,  sigma:0.0868, best_r2:0.1839, unexplained:0.826,
+             linear_contrib:0.054,  nonlinear_contrib:0.120, tool_contrib:-0.005, tool_contrib:0.000, unexpl:0.826,
+             top_feat:"thickness_uniformity", top_r2:0.0765,
+             feat_r2:{"thickness_uniformity":0.0765,"defect_density":0.0763,"defect_count":0.0706,"vth":0.0606,"critical_dimension":0.0532,"etch_rate":0.0268},
+             methods:{"단일 피처\n(최고 r²)":0.077,"Top3+Ridge":0.036,"Ridge (전체)":0.054,"GBM (전체)":0.174,"SelectK7+GBM":0.184,"PLS 1comp":0.077}
+           }
+};
+
+const NODES  = ["7nm","10nm","14nm","22nm","28nm"];
+const COLORS = {
+  "7nm":"#00d4ff","10nm":"#00e676","14nm":"#ffd740","22nm":"#ff6b35","28nm":"#ff1744"
+};
+const DELAYS = ["delay-1","delay-2","delay-3","delay-4","delay-5"];
+
+// ─── ① KPI 카드 ─────────────────────────────────────────────────
+(function buildKPI(){
+  const wrap = document.getElementById('kpiGrid');
+  NODES.forEach((node, i) => {
+    const d = DATA[node];
+    const uc = d.unexplained;
+    const warnClass = uc >= 0.80 ? 'warn' : '';
+    wrap.innerHTML += `
+    <div class="kpi-card animate-in ${DELAYS[i]}"
+         style="--node-color:${COLORS[node]}; border-color:${COLORS[node]}22">
+      <div class="node-label">${node}</div>
+      <div class="sample">${d.n}</div>
+      <div class="sample-label">Wafer 수</div>
+      <div class="sigma-row">
+        <span>σ(수율)</span>
+        <span class="sigma-val">${d.sigma.toFixed(4)}</span>
+      </div>
+      <div class="sigma-row">
+        <span>Best R²</span>
+        <span class="sigma-val" style="color:${COLORS[node]}">${d.best_r2.toFixed(4)}</span>
+      </div>
+      <div class="unexpl-pct ${warnClass}">${(uc*100).toFixed(1)}%</div>
+      <div class="unexpl-label">미설명 분산</div>
+    </div>`;
+  });
+})();
+
+// ─── ② 분산 분해 스택 바 ─────────────────────────────────────────
+(function buildDecomp(){
+  const wrap = document.getElementById('decompGrid');
+  const SEG_DEFS = [
+    { key:'linear_contrib',    label:'선형',    color:'#1565c0' },
+    { key:'nonlinear_contrib', label:'비선형',  color:'#0097a7' },
+    { key:'tool_contrib',      label:'설비',    color:'#558b2f' },
+    { key:'unexpl',            label:'미설명',  color:'#1e2d44' },
+  ];
+
+  NODES.forEach((node, i) => {
+    const d = DATA[node];
+
+    // unexpl 재계산 (음수 방지)
+    const lc = Math.max(0, d.linear_contrib);
+    const nc = Math.max(0, d.nonlinear_contrib);
+    const tc = Math.max(0, d.tool_contrib);
+    const uc = Math.max(0, 1.0 - lc - nc - tc);
+    const vals = [lc, nc, tc, uc];
+    const total = vals.reduce((a,b)=>a+b,0);
+
+    let segsHTML = '';
+    vals.forEach((v, si) => {
+      const pct = (v/total*100).toFixed(1);
+      const w   = (v/total*100).toFixed(2);
+      segsHTML += `
+        <div class="stack-seg" style="width:${w}%;background:${SEG_DEFS[si].color}"
+             title="${SEG_DEFS[si].label}: ${pct}%">
+          ${parseFloat(pct) > 8 ? `<span class="seg-label">${pct}%</span>` : ''}
+        </div>`;
+    });
+
+    let legendHTML = '';
+    vals.forEach((v, si) => {
+      const pct = (v/total*100).toFixed(1);
+      legendHTML += `
+        <div class="leg-row">
+          <div class="leg-dot" style="background:${SEG_DEFS[si].color}"></div>
+          <span>${SEG_DEFS[si].label}</span>
+          <span class="leg-val">${pct}%</span>
+        </div>`;
+    });
+
+    wrap.innerHTML += `
+    <div class="decomp-card animate-in ${DELAYS[i]}"
+         style="--node-color:${COLORS[node]}">
+      <div class="node-tag">${node}</div>
+      <div class="best-r2">n=${d.n} · Best R²=<span>${d.best_r2.toFixed(4)}</span></div>
+      <div class="stack-bar">${segsHTML}</div>
+      <div class="stack-legend">${legendHTML}</div>
+    </div>`;
+  });
+})();
+
+// ─── ③ 단일 피처 기여도 ─────────────────────────────────────────
+(function buildFeat(){
+  const wrap = document.getElementById('featGrid');
+  NODES.forEach((node, i) => {
+    const d    = DATA[node];
+    const col  = COLORS[node];
+    const feats = Object.entries(d.feat_r2).sort((a,b)=>b[1]-a[1]);
+    const maxR2 = Math.max(...feats.map(f=>f[1]), 0.01);
+
+    let rowsHTML = '';
+    feats.forEach(([fname, r2]) => {
+      const w = (r2 / maxR2 * 100).toFixed(1);
+      rowsHTML += `
+        <div class="feat-row">
+          <div class="feat-name-row">
+            <span class="feat-name">${fname}</span>
+            <span class="feat-r2-val">${r2.toFixed(4)}</span>
+          </div>
+          <div class="feat-bar-track">
+            <div class="feat-bar-fill" style="width:${w}%;background:${col}88"></div>
+          </div>
+        </div>`;
+    });
+
+    wrap.innerHTML += `
+    <div class="feat-card animate-in ${DELAYS[i]}"
+         style="--node-color:${col}">
+      <div class="node-tag">${node}  <span style="color:var(--text-dim);font-weight:400;font-size:10px">최강 r²=${d.top_r2.toFixed(3)}</span></div>
+      ${rowsHTML}
+    </div>`;
+  });
+})();
+
+// ─── ④ 방법론 비교 ──────────────────────────────────────────────
+(function buildMethod(){
+  const wrap = document.getElementById('methodGrid');
+  NODES.forEach((node, i) => {
+    const d   = DATA[node];
+    const col = COLORS[node];
+    const methods = Object.entries(d.methods);
+    const maxVal  = Math.max(...methods.map(m=>m[1]), 0.01);
+    const bestVal = Math.max(...methods.map(m=>m[1]));
+
+    let rowsHTML = '';
+    methods.forEach(([mname, val]) => {
+      const isBest = Math.abs(val - bestVal) < 0.001;
+      const isNeg  = val < 0;
+      const w      = isNeg ? 0 : (val / Math.max(maxVal, 0.4) * 100).toFixed(1);
+      const barCol = isNeg ? '#ff174422' : (isBest ? col : col + '55');
+      const valClass = isBest ? 'best' : (isNeg ? 'neg' : '');
+      rowsHTML += `
+        <div class="method-row">
+          <span class="method-name">${mname.replace('\n', ' ')}</span>
+          <div class="method-bar-track">
+            <div class="method-bar-fill" style="width:${w}%;background:${barCol}"></div>
+          </div>
+          <span class="method-val ${valClass}">${val >= 0 ? val.toFixed(4) : '음수'}</span>
+        </div>`;
+    });
+
+    wrap.innerHTML += `
+    <div class="method-card animate-in ${DELAYS[i]}"
+         style="--node-color:${col}">
+      <div class="node-tag">${node}</div>
+      ${rowsHTML}
+    </div>`;
+  });
+})();
+
+// ─── ⑤ Canvas 차트 ──────────────────────────────────────────────
+// (a) 설명/미설명 수평 누적 바
+(function drawBarCanvas(){
+  const canvas = document.getElementById('barCanvas');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const padL = 55, padR = 20, padT = 30, padB = 30;
+  const areaW = W - padL - padR;
+  const barH  = 22, gap = 14;
+  const total = 5;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // 배경
+  ctx.fillStyle = '#0f1520';
+  ctx.fillRect(0, 0, W, H);
+
+  // 타이틀
+  ctx.fillStyle = '#5a7599';
+  ctx.font = '600 10px IBM Plex Mono, monospace';
+  ctx.letterSpacing = '1px';
+  ctx.fillText('EXPLAINED  vs  UNEXPLAINED  VARIANCE', padL, 14);
+
+  // 0.5 목표선
+  const x50 = padL + 0.5 * areaW;
+  ctx.beginPath();
+  ctx.strokeStyle = '#ffd74044';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.moveTo(x50, padT - 4);
+  ctx.lineTo(x50, padT + total * (barH + gap));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffd740';
+  ctx.font = '9px IBM Plex Mono';
+  ctx.fillText('목표 0.5', x50 - 22, padT - 8);
+
+  NODES.forEach((node, i) => {
+    const d = DATA[node];
+    const y = padT + i * (barH + gap);
+    const explW   = Math.max(0, d.best_r2) * areaW;
+    const unexplW = Math.max(0, 1 - d.best_r2) * areaW;
+
+    // 설명 가능 바
+    const grad = ctx.createLinearGradient(padL, 0, padL + explW, 0);
+    grad.addColorStop(0, COLORS[node] + 'cc');
+    grad.addColorStop(1, COLORS[node] + '66');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(padL, y, explW, barH, [3, 0, 0, 3]);
+    ctx.fill();
+
+    // 미설명 바
+    ctx.fillStyle = '#1e2d44';
+    ctx.beginPath();
+    ctx.roundRect(padL + explW, y, unexplW, barH, [0, 3, 3, 0]);
+    ctx.fill();
+
+    // 노드 레이블
+    ctx.fillStyle = COLORS[node];
+    ctx.font = '600 11px IBM Plex Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(node, padL - 6, y + barH/2 + 4);
+
+    // 값 레이블
+    ctx.fillStyle = '#e0eaf8';
+    ctx.font = '600 10px IBM Plex Mono';
+    ctx.textAlign = 'left';
+    if (explW > 28) {
+      ctx.fillStyle = '#000a';
+      ctx.fillText((d.best_r2).toFixed(3), padL + 4, y + barH/2 + 4);
+    }
+    ctx.fillStyle = '#5a7599';
+    ctx.fillText((1 - d.best_r2).toFixed(3), padL + explW + unexplW - 36, y + barH/2 + 4);
+  });
+
+  // 하단 레이블
+  ctx.fillStyle = COLORS['10nm'] + 'cc';
+  ctx.font = '10px IBM Plex Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText('■ 설명 가능', padL, H - 8);
+  ctx.fillStyle = '#1e2d44cc';
+  ctx.fillRect(padL + 72, H - 17, 10, 10);
+  ctx.strokeStyle = '#3a5068';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(padL + 72, H - 17, 10, 10);
+  ctx.fillStyle = '#5a7599';
+  ctx.fillText('미설명 (미측정 변수 지배)', padL + 86, H - 8);
+})();
+
+// (b) 미설명 분산 버블 차트
+(function drawCircleCanvas(){
+  const canvas = document.getElementById('circleCanvas');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  ctx.fillStyle = '#0f1520';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#5a7599';
+  ctx.font = '600 10px IBM Plex Mono';
+  ctx.fillText('CIRCLE SIZE ∝ 미설명 분산', 10, 14);
+
+  const positions = [
+    [100, 100], [220, 80], [340, 110], [460, 90], [580, 105]
+  ];
+
+  NODES.forEach((node, i) => {
+    const d    = DATA[node];
+    const uc   = d.unexplained;
+    const [cx, cy] = positions[i];
+    const maxR  = 65;
+    const r     = maxR * Math.sqrt(uc);
+
+    // 미설명 원 (크고 흐리게)
+    const grd2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grd2.addColorStop(0, COLORS[node] + '18');
+    grd2.addColorStop(1, COLORS[node] + '05');
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = grd2;
+    ctx.fill();
+
+    // 설명 가능 원 (작고 밝게)
+    const er  = maxR * Math.sqrt(d.best_r2 > 0 ? d.best_r2 : 0.01);
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, er);
+    grd.addColorStop(0, COLORS[node] + 'ff');
+    grd.addColorStop(1, COLORS[node] + '44');
+    ctx.beginPath();
+    ctx.arc(cx, cy, er, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+
+    // 테두리
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = COLORS[node] + '33';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 노드 이름
+    ctx.fillStyle = COLORS[node];
+    ctx.font = '700 11px IBM Plex Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(node, cx, cy + 3);
+
+    // 미설명 %
+    ctx.fillStyle = COLORS[node] + 'cc';
+    ctx.font = '600 9.5px IBM Plex Mono';
+    ctx.fillText((uc * 100).toFixed(1) + '%', cx, cy + r + 14);
+    ctx.fillStyle = '#5a7599';
+    ctx.font = '9px IBM Plex Mono';
+    ctx.fillText('미설명', cx, cy + r + 26);
+  });
+
+  // 범례
+  const lx = 10, ly = H - 48;
+  const exR = 7, unR = 14;
+  ctx.beginPath(); ctx.arc(lx + exR, ly, exR, 0, Math.PI*2);
+  ctx.fillStyle = '#00d4ffaa'; ctx.fill();
+  ctx.fillStyle = '#e0eaf8'; ctx.font = '9.5px IBM Plex Mono'; ctx.textAlign = 'left';
+  ctx.fillText('설명 가능 분산 (Best R²)', lx + exR*2 + 6, ly + 4);
+  ctx.beginPath(); ctx.arc(lx + unR, ly + 20, unR, 0, Math.PI*2);
+  ctx.fillStyle = '#00d4ff18'; ctx.fill();
+  ctx.strokeStyle = '#00d4ff33'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#5a7599'; ctx.fillText('미설명 분산 (미측정 변수)', lx + unR*2 + 6, ly + 24);
+})();
+</script>
+</body>
+</html>

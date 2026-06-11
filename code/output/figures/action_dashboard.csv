@@ -1,0 +1,6 @@
+﻿Technology Node,Action: Reduce (↓),Action: Increase (↑)
+10nm,vth,deposition_rate
+22nm,defect_count,resistivity
+14nm,defect_count,implant_energy
+28nm,thickness_uniformity,etch_rate
+7nm,thickness_uniformity,oxide_thickness

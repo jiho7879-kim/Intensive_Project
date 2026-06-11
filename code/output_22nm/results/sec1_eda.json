@@ -1,0 +1,30 @@
+{
+  "node": "22nm",
+  "n_samples": 125,
+  "yield_mean": 0.34008721685057286,
+  "yield_std": 0.09172713787785115,
+  "fs_r2": {
+    "A": -0.1380352373386861,
+    "B": -0.11118364783403918,
+    "C": -0.12412270765886639,
+    "D": -0.12246614361355394
+  },
+  "high_corr_pairs": [
+    [
+      "thickness_uniformity",
+      "defect_count",
+      0.9598107466460363
+    ],
+    [
+      "thickness_uniformity",
+      "defect_density",
+      0.9995863833758416
+    ],
+    [
+      "defect_count",
+      "defect_density",
+      0.9611659559172604
+    ]
+  ],
+  "shapiro_p": 0.001268979897526832
+}

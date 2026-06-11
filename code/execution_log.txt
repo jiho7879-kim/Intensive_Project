@@ -1,0 +1,1396 @@
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§1 EDA', '§2 Baseline(27모델)', '§3 Tuning+best_params', '§4 Ensemble', '§5-7 진단/EDA비교/요약', '§8 의사결정흐름', 'XAI', '§9-1 후속실험', '§9-2 후속실험', '§9-3 후속실험', '$3-1 모든 model tuning']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §1  EDA 심층 분석 & 피처셋 설계
+═════════════════════════════════════════════════════════════════
+  이분화 t-test: t=35.08, p=3.61e-188
+  ANOVA:        F=307.48, p=5.53e-184
+  FS-A: R²=0.6615
+  FS-B: R²=0.6613
+  FS-C: R²=0.6661
+  FS-D: R²=0.6647
+  → sec1_eda_deep.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (20s)
+
+═════════════════════════════════════════════════════════════════
+  §2  Phase 1 — 베이스라인 스크리닝 (27개 모델)
+═════════════════════════════════════════════════════════════════
+
+  라이브러리 상태:
+    XGBoost : XGBoost (실제)
+    LightGBM: LightGBM (실제)
+    CatBoost: CatBoost (실제)
+
+  Model                            R² mean   R² std     RMSE         Cat
+  ────────────────────────────────────────────────────────────────────────
+  Linear Regression                 0.5688   0.0052   0.1150      linear
+  Ridge                             0.5694   0.0065   0.1149      linear
+  Lasso                             0.5692   0.0108   0.1149      linear
+  ElasticNet                        0.5689   0.0097   0.1150      linear
+  PLS (n=8)                         0.5679   0.0082   0.1151      linear
+  PCR (PCA+Ridge)                   0.5503   0.0104   0.1174      linear
+  Huber Regressor                   0.5642   0.0067   0.1156      robust
+  Bayesian Ridge                    0.5685   0.0097   0.1150      robust
+  TheilSen                          0.5067   0.0338   0.1229      robust
+  Kernel Ridge (RBF)                0.4590   0.0703   0.1288      robust
+  RANSAC + Ridge                    0.5515   0.0118   0.1173      robust
+  Quantile (Q=0.1)                 -0.1365   0.0600   0.1866      robust
+  SVR (RBF)                         0.5005   0.0360   0.1238   nonlinear
+  SVR (POLY)                        0.3445   0.0453   0.1417   nonlinear
+  NuSVR                             0.4448   0.0405   0.1305   nonlinear
+  KNN (k=5)                         0.4799   0.0280   0.1262   nonlinear
+  MLP (128-64)                      0.2688   0.0321   0.1496   nonlinear
+  Decision Tree                     0.5055   0.0438   0.1232        tree
+  Bagging (DT)                      0.6686   0.0281   0.1008    ensemble
+  Random Forest                     0.6609   0.0246   0.1020    ensemble
+  Extra Trees                       0.6246   0.0223   0.1073    ensemble
+  AdaBoost                          0.6634   0.0292   0.1016    ensemble
+  Gradient Boosting                 0.6642   0.0226   0.1015    boosting
+  HistGradientBoost                 0.6295   0.0345   0.1065    boosting
+  XGBoost (실제)                      0.6462   0.0310   0.1041    boosting
+  LightGBM (실제)                     0.6298   0.0291   0.1065    boosting
+  CatBoost (실제)                     0.6571   0.0245   0.1025    boosting
+  → sec2_phase1_screening.png
+  → phase1_results.csv
+  → sec2_phase1.json
+  ✅ Step 2 완료 (59s)
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    CatBoost (실제)                     : 0.6571
+    XGBoost (실제)                      : 0.6462
+    LightGBM (실제)                     : 0.6298
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [46s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [71s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [50s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (220s)
+
+═════════════════════════════════════════════════════════════════
+  §4  Phase 3 — 고급 앙상블 (Stacking / Voting)
+═════════════════════════════════════════════════════════════════
+  기반 학습기 Top3: ['Gradient Boosting', 'Random Forest', 'AdaBoost']
+  Voting (Top3)                 : R²=0.6760±0.0257
+  Stacking (Top3→Ridge)         : R²=0.6762±0.0258
+  → sec4_leaderboard.png
+  → sec4_adv_results.json
+  → sec4_leaderboard.csv
+  ✅ Step 4 완료 (28s)
+
+═════════════════════════════════════════════════════════════════
+  §5–7  최종 모델 진단 / EDA 비교 / 종합 요약
+═════════════════════════════════════════════════════════════════
+  최종 모델: Gradient Boosting  Train R²=0.7342
+  7nm: R²=0.4427 (n=200)
+  10nm: R²=0.5210 (n=375)
+  14nm: R²=0.4546 (n=250)
+  22nm: R²=0.3815 (n=125)
+  28nm: R²=0.3800 (n=300)
+  → sec5_final_diagnostics.png
+  → sec6_eda_comparison.png
+  → sec7_final_summary.png
+  → model_meta.json
+  ✅ Step 5 완료 (43s)
+
+═════════════════════════════════════════════════════════════════
+  §8  개선 실험 — 의사결정 흐름 중심
+═════════════════════════════════════════════════════════════════
+
+  현재 Best: Gradient Boosting  R²=0.6751
+  Phase3 최고: R²=0.6762  (동률 → 단순성 우선하여 Gradient Boosting 선택)
+
+  ━━ 의사결정 흐름 시작 ━━
+
+  [의사결정 ①]
+  발견: §5 진단 결과 22nm R²<0.5 — 노드별 성능 격차 심각
+  가설: 노드별 데이터 특성이 달라 전용 모델이 통합 모델보다 우수할 것
+  실험: 동일 GBM 하이퍼파라미터, 노드 상수 컬럼 제거, cross_val_predict 비교
+    7nm(n=200): 통합=0.2859 → 개별=0.1976  ❌
+    10nm(n=375): 통합=0.4102 → 개별=0.3687  ❌
+    14nm(n=250): 통합=0.3581 → 개별=0.2601  ❌
+    22nm(n=125): 통합=0.2993 → 개별=-0.1380  ❌
+    28nm(n=300): 통합=0.2845 → 개별=0.1594  ❌
+  판단: ❌ 기각 — 전 노드 열등
+  근거: ① 22nm 샘플 부족(n=125, fold당 ~100개) ② 노드 상호작용 피처 제거로 정보 손실
+  → 다음 의사결정 ② 진행: 앙상블 다양성 부족 문제 탐색
+
+  [의사결정 ②]
+  발견: Phase3 동종 Stacking R²=0.6762 — 단독 모델과 동률
+  가설: 알고리즘 계열이 다른 이기종(GBM+SVR+RF) 조합으로 예측 Diversity 확보
+  실험: StackingRegressor(GBM, SVR(RBF+스케일링), RF) → Ridge 메타 학습기
+    이기종 Stacking R²=0.6734±0.0226  RMSE=0.1001
+  판단: ❌ 기각 — 단독 Gradient Boosting(R²=0.6751)과 동등
+  근거: 동일 피처셋 학습 → 14/22/28nm 저수율 구간 공통 편향 공유 → Diversity 불충분
+  → 다음 의사결정 ③ 진행: 피처 표현력 부족 탐색
+
+  [의사결정 ③]
+  발견: FS-C(23개) R²=0.6751 정체 — 피처 표현력 한계 가능성
+  가설: 공정 안정성·전기 복합 지수 등 물리 기반 파생 변수 추가로 R² 향상
+  실험: process_stability·power_efficiency·cd_squared 추가 → FS-D(26개)
+    FS-C(23개)=0.6751  →  FS-D(26개)=0.6750  diff=-0.0001
+  판단: ❌ 기각 — 개선 미미(diff=-0.0001)
+  근거: 트리 분기가 이미 비선형성 포착 → 명시적 수식 변환의 한계 효용 낮음
+  → 다음 의사결정 ④ 진행: 커널 모델 낮은 이유 규명
+
+  [의사결정 ④]
+  발견: Phase1에서 NuSVR·KernelRidge가 앙상블 대비 현저히 낮음
+  분석 목적: 스케일링 문제인가? 아니면 데이터 구조 자체 문제인가?
+  실험: 스케일링 유무별 성능 분리 측정
+    NuSVR:       스케일링X=-0.0039  스케일링O=0.4448
+    KernelRidge: 스케일링X=-6.8107  스케일링O=0.4590
+    Best Gradient Boosting: 0.6751
+  결론: 스케일링 적용해도 트리 대비 여전히 낮음
+  근거: Yield의 이분화 구조(7/10nm vs 14~28nm)가 연속적 유사도를 가정하는 RBF 커널에 구조적으로 불리
+  시사: 이분화 패턴 포착에는 트리 기반 모델이 알고리즘 구조상 우수
+
+  ━━ 의사결정 흐름 완료 ━━
+  → 4가지 개선 방향 모두 기각. 최종 선정: Gradient Boosting (R²=0.6751)
+  → 성능 한계 근본 원인: 알고리즘 아님. 데이터 규모(22nm=125개) + 이분화 구조
+  → 권고 다음 단계: ① 14/22/28nm 데이터 추가 수집 ② XGBoost/LightGBM 설치 비교
+  → sec8_improvement_decisions.json
+  → sec8_improvement_decisions.png
+  ✅ Step 6 완료 (50s)
+
+═════════════════════════════════════════════════════════════════
+  XAI — 5-Method Voting 유의인자 추출
+═════════════════════════════════════════════════════════════════
+  [1/5] GB Built-in... 완료
+  [2/5] RF Importance... 완료
+  [3/5] ET Importance... 완료
+  [4/5] Permutation... 완료
+  [5/5] Pearson |r|... 완료
+
+  상위 10개:
+   1. critical_dimension        0.8107  ████████████████████████
+   2. is_advanced_node          0.4267  ████████████
+   3. vth                       0.2938  ████████
+   4. oxide_thickness           0.1718  █████
+   5. Swing                     0.1326  ███
+   6. node_x_cd                 0.1098  ███
+   7. defect_composite          0.0800  ██
+   8. thickness_uniformity      0.0711  ██
+   9. resistance                0.0692  ██
+  10. defect_count              0.0598  █
+  → xai_voting.png
+  → xai_results.csv
+  ✅ Step 7 완료 (5s)
+
+═════════════════════════════════════════════════════════════════
+  §9-1  후속 개선 실험 — 전이학습 / 계층 모델 / 노드별 정규화
+═════════════════════════════════════════════════════════════════
+
+  기준선: Gradient Boosting  R²=0.6751
+  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+
+  [§9-1 A] 전이학습 + Fine-tuning
+  설계: 통합 GBM 사전 학습 → warm_start + lr=0.005로 노드별 fine-tune
+    7nm(n=200): 0.2859 → 0.1516  ❌-0.1343
+    10nm(n=375): 0.4102 → 0.2405  ❌-0.1697
+    14nm(n=250): 0.3581 → 0.1600  ❌-0.1981
+    22nm(n=125): 0.2993 → -0.0838  ❌-0.3832
+    28nm(n=300): 0.2845 → 0.1009  ❌-0.1836
+  판단: ❌ 기각 — GBM warm_start는 기존 트리 가중치 보존이 아닌 새 트리 추가
+        → 소규모 노드 데이터에 새 트리가 과적합됨
+
+  [§9-1 B] 계층적 모델링 (Level1 Global + Level2 Residual)
+  설계: Level1(통합 GBM) 잔차를 노드별 GBM이 학습, 최종 = L1 + L2
+    7nm(n=200): 0.2859 → 0.2305  ❌-0.0554
+    10nm(n=375): 0.4102 → 0.3763  ❌-0.0339
+    14nm(n=250): 0.3581 → 0.3123  ❌-0.0458
+    22nm(n=125): 0.2993 → 0.1658  ❌-0.1335
+    28nm(n=300): 0.2845 → 0.2466  ❌-0.0379
+  전체: 0.6751 → 0.6524  (-0.0227)
+  판단: ❌ 기각 — 잔차 σ≈0.1이 랜덤에 가까워 Level2가 노이즈 과적합
+
+  [§9-1 C] 노드별 그룹 정규화 + Relative Performance 피처
+  설계: 노드별 μ·σ 정규화 + rel_cd_perf·rel_defect_perf 추가
+    원본 FS-C:              R²=0.6751
+    노드별 그룹 정규화:     R²=0.6290  -0.0461
+    + Relative Performance: R²=0.6301  -0.0450
+  판단: ❌ 기각 — 이분화 절대 수준 차이가 핵심 신호였음을 역설적으로 재확인
+  → sec91_improvement_followup.json
+
+  ━━ §9-1 종합: 3가지 후속 실험 모두 기각 ━━
+  근본 원인: 이분화 구조가 핵심 신호 → 노드별 분리/정규화 시 신호 손실
+  유일한 근본 해결책: 데이터 추가 수집 (22nm 125 → 500+)
+  → sec91_followup.png
+  ✅ Step 8 완료 (49s)
+
+═════════════════════════════════════════════════════════════════
+  §9-2  후속 개선 실험 — Expert 샘플링 / 잔차 Stacking / FS 분리
+═════════════════════════════════════════════════════════════════
+
+  [§9-2 A] Expert 가중치 샘플링 (Bagging of Specialists)
+    High Expert: 0.6690±0.0232  Low Expert: 0.6744±0.0233
+    Expert Stacking: 0.6761±0.0239  +0.0009
+    판단: ✅ 잠정 채택 가능 (미소 개선)
+
+  [§9-2 B] 잔차 보정형 Stacking (Residual Stacking)
+    SVR 잔차 R²=-0.7758  RF 잔차 R²=-0.0549
+    GBM+RF잔차 최종: 0.6578  -0.0174
+    판단: ❌ 기각 — 잔차 SNR 극히 낮음, SVR 역방향 과적합
+
+  [§9-2 C] 피처 서브스페이스 전략적 할당
+    FS Stacking R²=0.5657  -0.1094
+    판단: ❌ 기각 — 피처 분리 시 상호작용 정보 손실 대폭 하락
+
+  ━━ §9-2 종합 ━━
+  A Expert Stacking: 0.6761  +0.0009  ✅ 잠정 채택
+  B Residual Stack:  0.6578  -0.0174  ❌
+  C FS Stacking:     0.5657  -0.1094  ❌
+  핵심: Diversity 확보 = '알고리즘 다양성' 아닌 '데이터 관점 다양성'
+  → sec92_expert_stacking.json
+  → sec92_followup.png
+  ✅ Step 9 완료 (58s)
+
+═════════════════════════════════════════════════════════════════
+  §9-3  후속 개선 실험 — 잔차 타겟팅 전략 (A+B+C)
+═════════════════════════════════════════════════════════════════
+
+  기준 IQR: 7nm=0.2232 10nm=0.2012 14nm=0.1160 22nm=0.1323 28nm=0.1272
+
+  [§9-3 A] 잔차 타겟팅 하이브리드 샘플링
+  설계: 22nm×배율, 28nm×배율×0.8, 14nm×배율×0.6
+    ×1.5: R²=0.6763  22nm=0.2945  IQR_22=0.1332  ✅
+    ×2.0: R²=0.6756  22nm=0.2937  IQR_22=0.1339  ✅
+    ×3.0: R²=0.6748  22nm=0.2934  IQR_22=0.1332  ❌
+    ×5.0: R²=0.6754  22nm=0.2895  IQR_22=0.1301  ✅
+  → 최적 배율 ×1.5: R²=0.6763  +0.0011
+  판단: ✅ 채택 가능
+
+  [§9-3 B] 노드별 잔차 보정 모델 (Error Corrector)
+    14nm(n=250): 0.3581→0.3117  ❌-0.0464
+    22nm(n=125): 0.2993→0.2020  ❌-0.0973
+    28nm(n=300): 0.2845→0.2432  ❌-0.0413
+  전체 보정 후: R²=0.6679  -0.0073
+  판단: ❌ 기각 — 잔차 패턴 부재 + 소규모 과적합
+
+  [§9-3 C] 도메인 기반 그룹 Expert 앙상블
+  최적 α=0.4: R²=0.6767  +0.0015
+    7nm: 0.2859→0.2897  ✅+0.0038
+    10nm: 0.4102→0.4115  ✅+0.0014
+    14nm: 0.3581→0.3630  ✅+0.0049
+    22nm: 0.2993→0.2941  ❌-0.0053
+    28nm: 0.2845→0.2877  ✅+0.0032
+  판단: ⚠️ 잠정 채택
+
+  [§9-3 A+C 결합] 가중치 샘플링 + 그룹 Expert 앙상블
+  A+C 결합 R²=0.6766  vs Baseline=+0.0015
+  판단: ✅ 최고 성능
+  → sec93_residual_targeting.json
+
+  ━━ §9-3 종합 ━━
+  A 하이브리드 샘플링: 0.6763  +0.0011  ✅
+  B 잔차 보정 모델:    0.6679  -0.0073  ❌
+  C 그룹 Expert:       0.6767  +0.0015  ✅
+  A+C 결합:            0.6766  +0.0015
+  → sec93_followup.png
+  ✅ Step 10 완료 (57s)
+
+═════════════════════════════════════════════════════════════════
+  §3-1. Phase 2 — 전 모델 하이퍼파라미터 통합 튜닝 및 성능 비교
+═════════════════════════════════════════════════════════════════
+  [Linear Regression] 튜닝 중... 완료 (R²: 0.5688)
+  [Ridge] 튜닝 중... 완료 (R²: 0.5690)
+  [Lasso] 튜닝 중... 완료 (R²: 0.5691)
+  [ElasticNet] 튜닝 중... 완료 (R²: 0.5701)
+  [PLS (n=8)] 튜닝 중... 완료 (R²: 0.5679)
+  [PCR (PCA+Ridge)] 튜닝 중... 완료 (R²: 0.5514)
+  [Huber Regressor] 튜닝 중... 완료 (R²: 0.5661)
+  [Bayesian Ridge] 튜닝 중... 완료 (R²: 0.5685)
+  [TheilSen] 튜닝 중... 완료 (R²: 0.5320)
+  [Kernel Ridge (RBF)] 튜닝 중... 완료 (R²: 0.5692)
+  [RANSAC + Ridge] 튜닝 중... 완료 (R²: 0.5517)
+  [SVR (RBF)] 튜닝 중... 완료 (R²: 0.5562)
+  [SVR (POLY)] 튜닝 중... 완료 (R²: 0.4652)
+  [NuSVR] 튜닝 중... 완료 (R²: 0.5563)
+  [KNN (k=5)] 튜닝 중... 완료 (R²: 0.5478)
+  [Decision Tree] 튜닝 중... 완료 (R²: 0.6497)
+  [Bagging (DT)] 튜닝 중... 완료 (R²: 0.6709)
+  [Random Forest] 튜닝 중... 완료 (R²: 0.6714)
+  [Extra Trees] 튜닝 중... 완료 (R²: 0.6295)
+  [AdaBoost] 튜닝 중... 완료 (R²: 0.6687)
+  [Gradient Boosting] 튜닝 중... 완료 (R²: 0.6562)
+  [HistGradientBoost] 튜닝 중... 완료 (R²: 0.6577)
+  [XGBoost (실제)] 튜닝 중... 완료 (R²: 0.6704)
+  [LightGBM (실제)] 튜닝 중... 완료 (R²: 0.6600)
+  [CatBoost (실제)] 튜닝 중... 완료 (R²: 0.6591)
+  → sec3_1_summary_visualization.png
+  → sec3_1_final_results.json
+  ✅ Step 11 완료 (154s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (742s)
+  figures: 14개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §1  EDA 심층 분석 & 피처셋 설계
+═════════════════════════════════════════════════════════════════
+  이분화 t-test: t=35.08, p=3.61e-188
+  ANOVA:        F=307.48, p=5.53e-184
+  FS-A: R²=0.6692
+  FS-B: R²=0.6678
+  FS-C: R²=0.6701
+  FS-D: R²=0.6704
+  → sec1_eda_deep.png
+  → sec1_eda.json
+[{"variableName": "BOOST_LIBS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "CAT_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "FS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "NODE_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "PROCESS_FEATURES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "TECH_NODES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "ch", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "cols_hm", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "corr_m", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "df", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "fl", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fs_r2", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "fset", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fv", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "hg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "high_corr", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "lg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "mask_", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}, {"variableName": "out_s", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "outlier_pct", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "parts", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "top5", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "y", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}]
+[{"variableName": "BOOST_LIBS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "CAT_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "FS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "NODE_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "PROCESS_FEATURES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "TECH_NODES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "ch", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "cols_hm", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "corr_m", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "df", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "fl", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fs_r2", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "fset", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fv", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "hg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "high_corr", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "lg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "mask_", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}, {"variableName": "out_s", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "outlier_pct", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "parts", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "top5", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "y", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}]
+[{"variableName": "BOOST_LIBS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "CAT_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "FS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "NODE_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "PROCESS_FEATURES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "TECH_NODES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "ch", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "cols_hm", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "corr_m", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "df", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "fl", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fs_r2", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "fset", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fv", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "hg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "high_corr", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "lg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "mask_", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}, {"variableName": "out_s", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "outlier_pct", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "parts", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "top5", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "y", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}]
+[{"variableName": "BOOST_LIBS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "CAT_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "FS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "NODE_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "PROCESS_FEATURES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "TECH_NODES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "ch", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "cols_hm", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "corr_m", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "df", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "fl", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fs_r2", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "fset", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fv", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "hg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "high_corr", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "lg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "mask_", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}, {"variableName": "out_s", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "outlier_pct", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "parts", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "top5", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "y", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}]
+[{"variableName": "BOOST_LIBS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "CAT_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "FS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "NODE_COLORS", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "PROCESS_FEATURES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "TECH_NODES", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "ch", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "cols_hm", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "corr_m", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "df", "type": "pandas", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.DataFrame"}, {"variableName": "fl", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fs_r2", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "fset", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "fv", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "hg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "high_corr", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "lg", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "mask_", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}, {"variableName": "out_s", "type": "series", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "pandas.Series"}, {"variableName": "outlier_pct", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "parts", "type": "dictionary", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.dict"}, {"variableName": "top5", "type": "list", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "builtins.list"}, {"variableName": "y", "type": "ndarray", "supportedEngines": ["pandas"], "isLocalVariable": false, "rawType": "numpy.ndarray"}]
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : HistGBM (≈XGBoost 대안)
+  LightGBM: HistGBM (≈LightGBM 대안)
+  CatBoost: HistGBM (≈CatBoost 대안)
+═════════════════════════════════════════════════════════════════
+실행: ['§1 EDA', '§2 Baseline(27모델)', '§3 Tuning+best_params', '§4 Ensemble', '§5-7 진단/EDA비교/요약', '§8 의사결정흐름', 'XAI', '§9-1 후속실험', '§9-2 후속실험', '§9-3 후속실험', '$3-1 모든 model tuning']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §1  EDA 심층 분석 & 피처셋 설계
+═════════════════════════════════════════════════════════════════
+  이분화 t-test: t=35.08, p=3.61e-188
+  ANOVA:        F=307.48, p=5.53e-184
+  FS-A: R²=0.6615
+  FS-B: R²=0.6613
+  FS-C: R²=0.6661
+  FS-D: R²=0.6647
+  → sec1_eda_deep.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (7s)
+
+═════════════════════════════════════════════════════════════════
+  §2  Phase 1 — 베이스라인 스크리닝 (27개 모델)
+═════════════════════════════════════════════════════════════════
+
+  라이브러리 상태:
+    XGBoost : HistGBM (≈XGBoost 대안)
+    LightGBM: HistGBM (≈LightGBM 대안)
+    CatBoost: HistGBM (≈CatBoost 대안)
+
+  Model                            R² mean   R² std     RMSE         Cat
+  ────────────────────────────────────────────────────────────────────────
+  Linear Regression                 0.5688   0.0052   0.1150      linear
+  Ridge                             0.5694   0.0065   0.1149      linear
+  Lasso                             0.5692   0.0108   0.1149      linear
+  ElasticNet                        0.5689   0.0097   0.1150      linear
+  PLS (n=8)                         0.5679   0.0082   0.1151      linear
+  PCR (PCA+Ridge)                   0.5503   0.0104   0.1174      linear
+  Huber Regressor                   0.5642   0.0067   0.1156      robust
+  Bayesian Ridge                    0.5685   0.0097   0.1150      robust
+  TheilSen                          0.5067   0.0338   0.1229      robust
+  Kernel Ridge (RBF)                0.4590   0.0703   0.1288      robust
+  RANSAC + Ridge                    0.5515   0.0118   0.1173      robust
+  Quantile (Q=0.1)                 -0.1365   0.0600   0.1866      robust
+  SVR (RBF)                         0.5005   0.0360   0.1238   nonlinear
+  SVR (POLY)                        0.3445   0.0453   0.1417   nonlinear
+  NuSVR                             0.4448   0.0405   0.1305   nonlinear
+  KNN (k=5)                         0.4799   0.0280   0.1262   nonlinear
+  MLP (128-64)                      0.2688   0.0321   0.1496   nonlinear
+  Decision Tree                     0.5055   0.0438   0.1232        tree
+  Bagging (DT)                      0.6686   0.0281   0.1008    ensemble
+  Random Forest                     0.6609   0.0246   0.1020    ensemble
+  Extra Trees                       0.6246   0.0223   0.1073    ensemble
+  AdaBoost                          0.6634   0.0292   0.1016    ensemble
+  Gradient Boosting                 0.6642   0.0226   0.1015    boosting
+  HistGradientBoost                 0.6295   0.0345   0.1065    boosting
+  HistGBM (≈XGBoost 대안)             0.6442   0.0383   0.1044    boosting
+  HistGBM (≈LightGBM 대안)            0.6286   0.0333   0.1067    boosting
+  HistGBM (≈CatBoost 대안)            0.6543   0.0261   0.1029    boosting
+  → sec2_phase1_screening.png
+  → phase1_results.csv
+  → sec2_phase1.json
+  ✅ Step 2 완료 (13s)
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGBM (≈CatBoost 대안)            : 0.6543
+    HistGBM (≈XGBoost 대안)             : 0.6442
+    HistGBM (≈LightGBM 대안)            : 0.6286
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [12s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [HistGBM (≈XGBoost 대안)] Baseline=0.6442 → 탐색 (n_iter=25)... search=0.6486  5CV=0.6556±0.0367  [9s]
+    best_params: {'min_samples_leaf': 10, 'max_iter': 100, 'max_depth': 3, 'max_bins': 255, 'learning_rate': 0.1, 'l2_regularization': 0.0}
+
+  [HistGBM (≈LightGBM 대안)] Baseline=0.6286 → 탐색 (n_iter=25)... ═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§1 EDA', '§2 Baseline(27모델)', '§3 Tuning+best_params', '§4 Ensemble', '§5-7 진단/EDA비교/요약', '§8 의사결정흐름', 'XAI', '§9-1 후속실험', '§9-2 후속실험', '§9-3 후속실험', '$3-1 모든 model tuning']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §1  EDA 심층 분석 & 피처셋 설계
+═════════════════════════════════════════════════════════════════
+  이분화 t-test: t=35.08, p=3.61e-188
+  ANOVA:        F=307.48, p=5.53e-184
+  FS-A: R²=0.6615
+  FS-B: R²=0.6613
+  FS-C: R²=0.6661
+  FS-D: R²=0.6647
+  → sec1_eda_deep.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (7s)
+
+═════════════════════════════════════════════════════════════════
+  §2  Phase 1 — 베이스라인 스크리닝 (27개 모델)
+═════════════════════════════════════════════════════════════════
+
+  라이브러리 상태:
+    XGBoost : XGBoost (실제)
+    LightGBM: LightGBM (실제)
+    CatBoost: CatBoost (실제)
+
+  Model                            R² mean   R² std     RMSE         Cat
+  ────────────────────────────────────────────────────────────────────────
+  Linear Regression                 0.5688   0.0052   0.1150      linear
+  Ridge                             0.5694   0.0065   0.1149      linear
+  Lasso                             0.5692   0.0108   0.1149      linear
+  ElasticNet                        0.5689   0.0097   0.1150      linear
+  PLS (n=8)                         0.5679   0.0082   0.1151      linear
+  PCR (PCA+Ridge)                   0.5503   0.0104   0.1174      linear
+  Huber Regressor                   0.5642   0.0067   0.1156      robust
+  Bayesian Ridge                    0.5685   0.0097   0.1150      robust
+  TheilSen                          0.5067   0.0338   0.1229      robust
+  Kernel Ridge (RBF)                0.4590   0.0703   0.1288      robust
+  RANSAC + Ridge                    0.5515   0.0118   0.1173      robust
+  Quantile (Q=0.1)                 -0.1365   0.0600   0.1866      robust
+  SVR (RBF)                         0.5005   0.0360   0.1238   nonlinear
+  SVR (POLY)                        0.3445   0.0453   0.1417   nonlinear
+  NuSVR                             0.4448   0.0405   0.1305   nonlinear
+  KNN (k=5)                         0.4799   0.0280   0.1262   nonlinear
+  MLP (128-64)                      0.2688   0.0321   0.1496   nonlinear
+  Decision Tree                     0.5055   0.0438   0.1232        tree
+  Bagging (DT)                      0.6686   0.0281   0.1008    ensemble
+  Random Forest                     0.6609   0.0246   0.1020    ensemble
+  Extra Trees                       0.6246   0.0223   0.1073    ensemble
+  AdaBoost                          0.6634   0.0292   0.1016    ensemble
+  Gradient Boosting                 0.6642   0.0226   0.1015    boosting
+  HistGradientBoost                 0.6295   0.0345   0.1065    boosting
+  XGBoost (실제)                      0.6462   0.0310   0.1041    boosting
+  LightGBM (실제)                     0.6298   0.0291   0.1065    boosting
+  CatBoost (실제)                     0.6571   0.0245   0.1025    boosting
+  → sec2_phase1_screening.png
+  → phase1_results.csv
+  → sec2_phase1.json
+  ✅ Step 2 완료 (17s)
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    CatBoost (실제)                     : 0.6571
+    XGBoost (실제)                      : 0.6462
+    LightGBM (실제)                     : 0.6298
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [19s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [29s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [22s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (93s)
+
+═════════════════════════════════════════════════════════════════
+  §4  Phase 3 — 고급 앙상블 (Stacking / Voting)
+═════════════════════════════════════════════════════════════════
+  기반 학습기 Top3: ['Gradient Boosting', 'Random Forest', 'AdaBoost']
+  Voting (Top3)                 : R²=0.6760±0.0257
+  Stacking (Top3→Ridge)         : R²=0.6762±0.0258
+  → sec4_leaderboard.png
+  → sec4_adv_results.json
+  → sec4_leaderboard.csv
+  ✅ Step 4 완료 (13s)
+
+═════════════════════════════════════════════════════════════════
+  §5–7  최종 모델 진단 / EDA 비교 / 종합 요약
+═════════════════════════════════════════════════════════════════
+  최종 모델: Gradient Boosting  Train R²=0.7342
+  7nm: R²=0.4427 (n=200)
+  10nm: R²=0.5210 (n=375)
+  14nm: R²=0.4546 (n=250)
+  22nm: R²=0.3815 (n=125)
+  28nm: R²=0.3800 (n=300)
+  → sec5_final_diagnostics.png
+  → sec6_eda_comparison.png
+  → sec7_final_summary.png
+  → model_meta.json
+  ✅ Step 5 완료 (24s)
+
+═════════════════════════════════════════════════════════════════
+  §8  개선 실험 — 의사결정 흐름 중심
+═════════════════════════════════════════════════════════════════
+
+  현재 Best: Gradient Boosting  R²=0.6751
+  Phase3 최고: R²=0.6762  (동률 → 단순성 우선하여 Gradient Boosting 선택)
+
+  ━━ 의사결정 흐름 시작 ━━
+
+  [의사결정 ①]
+  발견: §5 진단 결과 22nm R²<0.5 — 노드별 성능 격차 심각
+  가설: 노드별 데이터 특성이 달라 전용 모델이 통합 모델보다 우수할 것
+  실험: 동일 GBM 하이퍼파라미터, 노드 상수 컬럼 제거, cross_val_predict 비교
+    7nm(n=200): 통합=0.2859 → 개별=0.1976  ❌
+    10nm(n=375): 통합=0.4102 → 개별=0.3687  ❌
+    14nm(n=250): 통합=0.3581 → 개별=0.2601  ❌
+    22nm(n=125): 통합=0.2993 → 개별=-0.1380  ❌
+    28nm(n=300): 통합=0.2845 → 개별=0.1594  ❌
+  판단: ❌ 기각 — 전 노드 열등
+  근거: ① 22nm 샘플 부족(n=125, fold당 ~100개) ② 노드 상호작용 피처 제거로 정보 손실
+  → 다음 의사결정 ② 진행: 앙상블 다양성 부족 문제 탐색
+
+  [의사결정 ②]
+  발견: Phase3 동종 Stacking R²=0.6762 — 단독 모델과 동률
+  가설: 알고리즘 계열이 다른 이기종(GBM+SVR+RF) 조합으로 예측 Diversity 확보
+  실험: StackingRegressor(GBM, SVR(RBF+스케일링), RF) → Ridge 메타 학습기
+    이기종 Stacking R²=0.6734±0.0226  RMSE=0.1001
+  판단: ❌ 기각 — 단독 Gradient Boosting(R²=0.6751)과 동등
+  근거: 동일 피처셋 학습 → 14/22/28nm 저수율 구간 공통 편향 공유 → Diversity 불충분
+  → 다음 의사결정 ③ 진행: 피처 표현력 부족 탐색
+
+  [의사결정 ③]
+  발견: FS-C(23개) R²=0.6751 정체 — 피처 표현력 한계 가능성
+  가설: 공정 안정성·전기 복합 지수 등 물리 기반 파생 변수 추가로 R² 향상
+  실험: process_stability·power_efficiency·cd_squared 추가 → FS-D(26개)
+    FS-C(23개)=0.6751  →  FS-D(26개)=0.6750  diff=-0.0001
+  판단: ❌ 기각 — 개선 미미(diff=-0.0001)
+  근거: 트리 분기가 이미 비선형성 포착 → 명시적 수식 변환의 한계 효용 낮음
+  → 다음 의사결정 ④ 진행: 커널 모델 낮은 이유 규명
+
+  [의사결정 ④]
+  발견: Phase1에서 NuSVR·KernelRidge가 앙상블 대비 현저히 낮음
+  분석 목적: 스케일링 문제인가? 아니면 데이터 구조 자체 문제인가?
+  실험: 스케일링 유무별 성능 분리 측정
+    NuSVR:       스케일링X=-0.0039  스케일링O=0.4448
+    KernelRidge: 스케일링X=-6.8107  스케일링O=0.4590
+    Best Gradient Boosting: 0.6751
+  결론: 스케일링 적용해도 트리 대비 여전히 낮음
+  근거: Yield의 이분화 구조(7/10nm vs 14~28nm)가 연속적 유사도를 가정하는 RBF 커널에 구조적으로 불리
+  시사: 이분화 패턴 포착에는 트리 기반 모델이 알고리즘 구조상 우수
+
+  ━━ 의사결정 흐름 완료 ━━
+  → 4가지 개선 방향 모두 기각. 최종 선정: Gradient Boosting (R²=0.6751)
+  → 성능 한계 근본 원인: 알고리즘 아님. 데이터 규모(22nm=125개) + 이분화 구조
+  → 권고 다음 단계: ① 14/22/28nm 데이터 추가 수집 ② XGBoost/LightGBM 설치 비교
+  → sec8_improvement_decisions.json
+  → sec8_improvement_decisions.png
+  ✅ Step 6 완료 (26s)
+
+═════════════════════════════════════════════════════════════════
+  XAI — 5-Method Voting 유의인자 추출
+═════════════════════════════════════════════════════════════════
+  [1/5] GB Built-in... 완료
+  [2/5] RF Importance... 완료
+  [3/5] ET Importance... 완료
+  [4/5] Permutation... 완료
+  [5/5] Pearson |r|... 완료
+
+  상위 10개:
+   1. critical_dimension        0.8107  ████████████████████████
+   2. is_advanced_node          0.4267  ████████████
+   3. vth                       0.2938  ████████
+   4. oxide_thickness           0.1718  █████
+   5. Swing                     0.1326  ███
+   6. node_x_cd                 0.1098  ███
+   7. defect_composite          0.0800  ██
+   8. thickness_uniformity      0.0711  ██
+   9. resistance                0.0692  ██
+  10. defect_count              0.0598  █
+  → xai_voting.png
+  → xai_results.csv
+  ✅ Step 7 완료 (3s)
+
+═════════════════════════════════════════════════════════════════
+  §9-1  후속 개선 실험 — 전이학습 / 계층 모델 / 노드별 정규화
+═════════════════════════════════════════════════════════════════
+
+  기준선: Gradient Boosting  R²=0.6751
+  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─  ─
+
+  [§9-1 A] 전이학습 + Fine-tuning
+  설계: 통합 GBM 사전 학습 → warm_start + lr=0.005로 노드별 fine-tune
+    7nm(n=200): 0.2859 → 0.1516  ❌-0.1343
+    10nm(n=375): 0.4102 → 0.2405  ❌-0.1697
+    14nm(n=250): 0.3581 → 0.1600  ❌-0.1981
+    22nm(n=125): 0.2993 → -0.0838  ❌-0.3832
+    28nm(n=300): 0.2845 → 0.1009  ❌-0.1836
+  판단: ❌ 기각 — GBM warm_start는 기존 트리 가중치 보존이 아닌 새 트리 추가
+        → 소규모 노드 데이터에 새 트리가 과적합됨
+
+  [§9-1 B] 계층적 모델링 (Level1 Global + Level2 Residual)
+  설계: Level1(통합 GBM) 잔차를 노드별 GBM이 학습, 최종 = L1 + L2
+    7nm(n=200): 0.2859 → 0.2305  ❌-0.0554
+    10nm(n=375): 0.4102 → 0.3763  ❌-0.0339
+    14nm(n=250): 0.3581 → 0.3123  ❌-0.0458
+    22nm(n=125): 0.2993 → 0.1658  ❌-0.1335
+    28nm(n=300): 0.2845 → 0.2466  ❌-0.0379
+  전체: 0.6751 → 0.6524  (-0.0227)
+  판단: ❌ 기각 — 잔차 σ≈0.1이 랜덤에 가까워 Level2가 노이즈 과적합
+
+  [§9-1 C] 노드별 그룹 정규화 + Relative Performance 피처
+  설계: 노드별 μ·σ 정규화 + rel_cd_perf·rel_defect_perf 추가
+    원본 FS-C:              R²=0.6751
+    노드별 그룹 정규화:     R²=0.6290  -0.0461
+    + Relative Performance: R²=0.6301  -0.0450
+  판단: ❌ 기각 — 이분화 절대 수준 차이가 핵심 신호였음을 역설적으로 재확인
+  → sec91_improvement_followup.json
+
+  ━━ §9-1 종합: 3가지 후속 실험 모두 기각 ━━
+  근본 원인: 이분화 구조가 핵심 신호 → 노드별 분리/정규화 시 신호 손실
+  유일한 근본 해결책: 데이터 추가 수집 (22nm 125 → 500+)
+  → sec91_followup.png
+  ✅ Step 8 완료 (28s)
+
+═════════════════════════════════════════════════════════════════
+  §9-2  후속 개선 실험 — Expert 샘플링 / 잔차 Stacking / FS 분리
+═════════════════════════════════════════════════════════════════
+
+  [§9-2 A] Expert 가중치 샘플링 (Bagging of Specialists)
+    High Expert: 0.6690±0.0232  Low Expert: 0.6744±0.0233
+    Expert Stacking: 0.6761±0.0239  +0.0009
+    판단: ✅ 잠정 채택 가능 (미소 개선)
+
+  [§9-2 B] 잔차 보정형 Stacking (Residual Stacking)
+    SVR 잔차 R²=-0.7758  RF 잔차 R²=-0.0549
+    GBM+RF잔차 최종: 0.6578  -0.0174
+    판단: ❌ 기각 — 잔차 SNR 극히 낮음, SVR 역방향 과적합
+
+  [§9-2 C] 피처 서브스페이스 전략적 할당
+    FS Stacking R²=0.5657  -0.1094
+    판단: ❌ 기각 — 피처 분리 시 상호작용 정보 손실 대폭 하락
+
+  ━━ §9-2 종합 ━━
+  A Expert Stacking: 0.6761  +0.0009  ✅ 잠정 채택
+  B Residual Stack:  0.6578  -0.0174  ❌
+  C FS Stacking:     0.5657  -0.1094  ❌
+  핵심: Diversity 확보 = '알고리즘 다양성' 아닌 '데이터 관점 다양성'
+  → sec92_expert_stacking.json
+  → sec92_followup.png
+  ✅ Step 9 완료 (34s)
+
+═════════════════════════════════════════════════════════════════
+  §9-3  후속 개선 실험 — 잔차 타겟팅 전략 (A+B+C)
+═════════════════════════════════════════════════════════════════
+
+  기준 IQR: 7nm=0.2232 10nm=0.2012 14nm=0.1160 22nm=0.1323 28nm=0.1272
+
+  [§9-3 A] 잔차 타겟팅 하이브리드 샘플링
+  설계: 22nm×배율, 28nm×배율×0.8, 14nm×배율×0.6
+    ×1.5: R²=0.6763  22nm=0.2945  IQR_22=0.1332  ✅
+    ×2.0: R²=0.6756  22nm=0.2937  IQR_22=0.1339  ✅
+    ×3.0: R²=0.6748  22nm=0.2934  IQR_22=0.1332  ❌
+    ×5.0: R²=0.6754  22nm=0.2895  IQR_22=0.1301  ✅
+  → 최적 배율 ×1.5: R²=0.6763  +0.0011
+  판단: ✅ 채택 가능
+
+  [§9-3 B] 노드별 잔차 보정 모델 (Error Corrector)
+    14nm(n=250): 0.3581→0.3117  ❌-0.0464
+    22nm(n=125): 0.2993→0.2020  ❌-0.0973
+    28nm(n=300): 0.2845→0.2432  ❌-0.0413
+  전체 보정 후: R²=0.6679  -0.0073
+  판단: ❌ 기각 — 잔차 패턴 부재 + 소규모 과적합
+
+  [§9-3 C] 도메인 기반 그룹 Expert 앙상블
+  최적 α=0.4: R²=0.6767  +0.0015
+    7nm: 0.2859→0.2897  ✅+0.0038
+    10nm: 0.4102→0.4115  ✅+0.0014
+    14nm: 0.3581→0.3630  ✅+0.0049
+    22nm: 0.2993→0.2941  ❌-0.0053
+    28nm: 0.2845→0.2877  ✅+0.0032
+  판단: ⚠️ 잠정 채택
+
+  [§9-3 A+C 결합] 가중치 샘플링 + 그룹 Expert 앙상블
+  A+C 결합 R²=0.6766  vs Baseline=+0.0015
+  판단: ✅ 최고 성능
+  → sec93_residual_targeting.json
+
+  ━━ §9-3 종합 ━━
+  A 하이브리드 샘플링: 0.6763  +0.0011  ✅
+  B 잔차 보정 모델:    0.6679  -0.0073  ❌
+  C 그룹 Expert:       0.6767  +0.0015  ✅
+  A+C 결합:            0.6766  +0.0015
+  → sec93_followup.png
+  ✅ Step 10 완료 (39s)
+
+═════════════════════════════════════════════════════════════════
+  §3-1. Phase 2 — 전 모델 하이퍼파라미터 통합 튜닝 및 성능 비교
+═════════════════════════════════════════════════════════════════
+  [Linear Regression] 튜닝 중... 완료 (R²: 0.5688)
+  [Ridge] 튜닝 중... 완료 (R²: 0.5690)
+  [Lasso] 튜닝 중... 완료 (R²: 0.5691)
+  [ElasticNet] 튜닝 중... 완료 (R²: 0.5701)
+  [PLS (n=8)] 튜닝 중... 완료 (R²: 0.5679)
+  [PCR (PCA+Ridge)] 튜닝 중... 완료 (R²: 0.5514)
+  [Huber Regressor] 튜닝 중... 완료 (R²: 0.5661)
+  [Bayesian Ridge] 튜닝 중... 완료 (R²: 0.5685)
+  [TheilSen] 튜닝 중... 완료 (R²: 0.5320)
+  [Kernel Ridge (RBF)] 튜닝 중... 완료 (R²: 0.5692)
+  [RANSAC + Ridge] 튜닝 중... 완료 (R²: 0.5517)
+  [SVR (RBF)] 튜닝 중... 완료 (R²: 0.5562)
+  [SVR (POLY)] 튜닝 중... 완료 (R²: 0.4652)
+  [NuSVR] 튜닝 중... 완료 (R²: 0.5563)
+  [KNN (k=5)] 튜닝 중... 완료 (R²: 0.5478)
+  [Decision Tree] 튜닝 중... 완료 (R²: 0.6497)
+  [Bagging (DT)] 튜닝 중... 완료 (R²: 0.6709)
+  [Random Forest] 튜닝 중... 완료 (R²: 0.6714)
+  [Extra Trees] 튜닝 중... 완료 (R²: 0.6295)
+  [AdaBoost] 튜닝 중... 완료 (R²: 0.6687)
+  [Gradient Boosting] 튜닝 중... 완료 (R²: 0.6562)
+  [HistGradientBoost] 튜닝 중... 완료 (R²: 0.6577)
+  [XGBoost (실제)] 튜닝 중... 완료 (R²: 0.6704)
+  [LightGBM (실제)] 튜닝 중... 완료 (R²: 0.6600)
+  [CatBoost (실제)] 튜닝 중... 완료 (R²: 0.6591)
+  → sec3_1_summary_visualization.png
+  → sec3_1_final_results.json
+  ✅ Step 11 완료 (78s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (361s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§3 Tuning+best_params']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [17s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [21s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [13s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (63s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (63s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§3 Tuning+best_params']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [17s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Extra Trees] Baseline=0.6246 → 탐색 (n_iter=25)... search=0.6138  5CV=0.6266±0.0153  [7s]
+    best_params: {'n_estimators': 300, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 0.7, 'max_depth': 8, 'bootstrap': False}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [20s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [12s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (68s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (68s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§3 Tuning+best_params']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [16s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Extra Trees] Baseline=0.6246 → 탐색 (n_iter=25)... search=0.6138  5CV=0.6266±0.0153  [6s]
+    best_params: {'n_estimators': 300, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 0.7, 'max_depth': 8, 'bootstrap': False}
+
+  [HistGradientBoost] Baseline=0.6295 → 탐색 (n_iter=25)... search=0.6486  5CV=0.6556±0.0367  [6s]
+    best_params: {'min_samples_leaf': 10, 'max_iter': 100, 'max_depth': 3, 'max_bins': 255, 'learning_rate': 0.1, 'l2_regularization': 0.0}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [20s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [12s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (73s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (73s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§3 Tuning+best_params']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [17s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Extra Trees] Baseline=0.6246 → 탐색 (n_iter=25)... search=0.6138  5CV=0.6266±0.0153  [7s]
+    best_params: {'n_estimators': 300, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 0.7, 'max_depth': 8, 'bootstrap': False}
+
+  [HistGradientBoost] Baseline=0.6295 → 탐색 (n_iter=25)... search=0.6486  5CV=0.6556±0.0367  [6s]
+    best_params: {'min_samples_leaf': 10, 'max_iter': 100, 'max_depth': 3, 'max_bins': 255, 'learning_rate': 0.1, 'l2_regularization': 0.0}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [20s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [12s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (75s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (75s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§3 Tuning+best_params']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [17s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Extra Trees] Baseline=0.6246 → 탐색 (n_iter=25)... search=0.6138  5CV=0.6266±0.0153  [7s]
+    best_params: {'n_estimators': 300, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 0.7, 'max_depth': 8, 'bootstrap': False}
+
+  [HistGradientBoost] Baseline=0.6295 → 탐색 (n_iter=25)... search=0.6486  5CV=0.6556±0.0367  [6s]
+    best_params: {'min_samples_leaf': 10, 'max_iter': 100, 'max_depth': 3, 'max_bins': 255, 'learning_rate': 0.1, 'l2_regularization': 0.0}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [20s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [12s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (80s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (80s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§3 Tuning+best_params']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [17s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Extra Trees] Baseline=0.6246 → 탐색 (n_iter=25)... search=0.6138  5CV=0.6266±0.0153  [7s]
+    best_params: {'n_estimators': 300, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 0.7, 'max_depth': 8, 'bootstrap': False}
+
+  [HistGradientBoost] Baseline=0.6295 → 탐색 (n_iter=25)... search=0.6486  5CV=0.6556±0.0367  [5s]
+    best_params: {'min_samples_leaf': 10, 'max_iter': 100, 'max_depth': 3, 'max_bins': 255, 'learning_rate': 0.1, 'l2_regularization': 0.0}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [22s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [13s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (77s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (77s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§3 Tuning+best_params']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [17s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Extra Trees] Baseline=0.6246 → 탐색 (n_iter=25)... search=0.6138  5CV=0.6266±0.0153  [7s]
+    best_params: {'n_estimators': 300, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 0.7, 'max_depth': 8, 'bootstrap': False}
+
+  [HistGradientBoost] Baseline=0.6295 → 탐색 (n_iter=25)... search=0.6486  5CV=0.6556±0.0367  [6s]
+    best_params: {'min_samples_leaf': 10, 'max_iter': 100, 'max_depth': 3, 'max_bins': 255, 'learning_rate': 0.1, 'l2_regularization': 0.0}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [20s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [12s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (80s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (80s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§3 Tuning+best_params']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+═════════════════════════════════════════════════════════════════
+
+  Phase1 Baseline R²:
+    Gradient Boosting                 : 0.6642
+    AdaBoost                          : 0.6634
+    Random Forest                     : 0.6609
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6642 → 탐색 (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [18s]
+    best_params: {'subsample': 0.9, 'n_estimators': 200, 'min_samples_leaf': 4, 'max_features': 0.9, 'max_depth': 2, 'learning_rate': 0.03}
+
+  [Extra Trees] Baseline=0.6246 → 탐색 (n_iter=25)... search=0.6138  5CV=0.6266±0.0153  [7s]
+    best_params: {'n_estimators': 300, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 0.7, 'max_depth': 8, 'bootstrap': False}
+
+  [HistGradientBoost] Baseline=0.6295 → 탐색 (n_iter=25)... search=0.6486  5CV=0.6556±0.0367  [6s]
+    best_params: {'min_samples_leaf': 10, 'max_iter': 100, 'max_depth': 3, 'max_bins': 255, 'learning_rate': 0.1, 'l2_regularization': 0.0}
+
+  [Random Forest] Baseline=0.6609 → 탐색 (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [21s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 4, 'max_features': 0.5, 'max_depth': 5, 'bootstrap': True}
+
+  [AdaBoost] Baseline=0.6634 → 탐색 (n_iter=25)... search=0.6561  5CV=0.6692±0.0313  [13s]
+    best_params: {'n_estimators': 200, 'loss': 'linear', 'learning_rate': 0.05}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (78s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (78s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§9-3 후속실험']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §9-3  후속 개선 실험 — 잔차 타겟팅 전략 (A+B+C)
+═════════════════════════════════════════════════════════════════
+
+  기준 IQR: 7nm=0.2232 10nm=0.2012 14nm=0.1160 22nm=0.1323 28nm=0.1272
+
+  [§9-3 A] 잔차 타겟팅 하이브리드 샘플링
+  설계: 22nm×배율, 28nm×배율×0.8, 14nm×배율×0.6
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['$3-1 모든 model tuning']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3-1. Phase 2 — 전 모델 하이퍼파라미터 통합 튜닝 및 성능 비교
+═════════════════════════════════════════════════════════════════
+  [Linear Regression] 튜닝 중... 완료 (R²: 0.5688)
+  [Ridge] 튜닝 중... 완료 (R²: 0.5690)
+  [Lasso] 튜닝 중... 완료 (R²: 0.5691)
+  [ElasticNet] 튜닝 중... 완료 (R²: 0.5701)
+  [PLS (n=8)] 튜닝 중... 완료 (R²: 0.5679)
+  [PCR (PCA+Ridge)] 튜닝 중... 완료 (R²: 0.5514)
+  [Huber Regressor] 튜닝 중... 완료 (R²: 0.5661)
+  [Bayesian Ridge] 튜닝 중... 완료 (R²: 0.5685)
+  [TheilSen] 튜닝 중... 완료 (R²: 0.5320)
+  [Kernel Ridge (RBF)] 튜닝 중... 완료 (R²: 0.5692)
+  [RANSAC + Ridge] 튜닝 중... 완료 (R²: 0.5517)
+  [SVR (RBF)] 튜닝 중... 완료 (R²: 0.5562)
+  [SVR (POLY)] 튜닝 중... 완료 (R²: 0.4652)
+  [NuSVR] 튜닝 중... 완료 (R²: 0.5563)
+  [KNN (k=5)] 튜닝 중... 완료 (R²: 0.5478)
+  [Decision Tree] 튜닝 중... 완료 (R²: 0.6497)
+  [Bagging (DT)] 튜닝 중... 완료 (R²: 0.6709)
+  [Random Forest] 튜닝 중... 완료 (R²: 0.6714)
+  [Extra Trees] 튜닝 중... 완료 (R²: 0.6295)
+  [AdaBoost] 튜닝 중... 완료 (R²: 0.6687)
+  [Gradient Boosting] 튜닝 중... 완료 (R²: 0.6562)
+  [HistGradientBoost] 튜닝 중... 완료 (R²: 0.6577)
+  [XGBoost (실제)] 튜닝 중... 완료 (R²: 0.6704)
+  [LightGBM (실제)] 튜닝 중... 완료 (R²: 0.6600)
+  [CatBoost (실제)] 튜닝 중... 완료 (R²: 0.6591)
+  → sec3_1_summary_visualization.png
+  → sec3_1_final_results.json
+  ✅ Step 11 완료 (55s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (55s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['$3-1 모든 model tuning']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3-1. Phase 2 — 전 모델 하이퍼파라미터 통합 튜닝 및 성능 비교
+═════════════════════════════════════════════════════════════════
+  [Linear Regression] 튜닝 중... 완료 (R²: 0.5688)
+  [Ridge] 튜닝 중... 완료 (R²: 0.5690)
+  [Lasso] 튜닝 중... 완료 (R²: 0.5691)
+  [ElasticNet] 튜닝 중... 완료 (R²: 0.5701)
+  [PLS (n=8)] 튜닝 중... 완료 (R²: 0.5679)
+  [PCR (PCA+Ridge)] 튜닝 중... 완료 (R²: 0.5514)
+  [Huber Regressor] 튜닝 중... 완료 (R²: 0.5661)
+  [Bayesian Ridge] 튜닝 중... 완료 (R²: 0.5685)
+  [TheilSen] 튜닝 중... 완료 (R²: 0.5320)
+  [Kernel Ridge (RBF)] 튜닝 중... 완료 (R²: 0.5692)
+  [RANSAC + Ridge] 튜닝 중... 완료 (R²: 0.5517)
+  [SVR (RBF)] 튜닝 중... 완료 (R²: 0.5562)
+  [SVR (POLY)] 튜닝 중... 완료 (R²: 0.4652)
+  [NuSVR] 튜닝 중... 완료 (R²: 0.5563)
+  [KNN (k=5)] 튜닝 중... 완료 (R²: 0.5478)
+  [Decision Tree] 튜닝 중... 완료 (R²: 0.6497)
+  [Bagging (DT)] 튜닝 중... 완료 (R²: 0.6709)
+  [Random Forest] 튜닝 중... 완료 (R²: 0.6714)
+  [Extra Trees] 튜닝 중... 완료 (R²: 0.6295)
+  [AdaBoost] 튜닝 중... 완료 (R²: 0.6687)
+  [Gradient Boosting] 튜닝 중... 완료 (R²: 0.6562)
+  [HistGradientBoost] 튜닝 중... 완료 (R²: 0.6577)
+  [XGBoost (실제)] 튜닝 중... 완료 (R²: 0.6704)
+  [LightGBM (실제)] 튜닝 중... 완료 (R²: 0.6600)
+  [CatBoost (실제)] 튜닝 중... 완료 (R²: 0.6591)
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['$3-1 모든 model tuning']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §3-1. Phase 2 — 전 모델 하이퍼파라미터 통합 튜닝 및 성능 비교
+═════════════════════════════════════════════════════════════════
+  [Linear Regression] 튜닝 중... 완료 (R²: 0.5688)
+  [Ridge] 튜닝 중... 완료 (R²: 0.5690)
+  [Lasso] 튜닝 중... 완료 (R²: 0.5691)
+  [ElasticNet] 튜닝 중... 완료 (R²: 0.5701)
+  [PLS (n=8)] 튜닝 중... 완료 (R²: 0.5679)
+  [PCR (PCA+Ridge)] 튜닝 중... 완료 (R²: 0.5514)
+  [Huber Regressor] 튜닝 중... 완료 (R²: 0.5661)
+  [Bayesian Ridge] 튜닝 중... 완료 (R²: 0.5685)
+  [TheilSen] 튜닝 중... 완료 (R²: 0.5320)
+  [Kernel Ridge (RBF)] 튜닝 중... 완료 (R²: 0.5692)
+  [RANSAC + Ridge] 튜닝 중... 완료 (R²: 0.5517)
+  [SVR (RBF)] 튜닝 중... 완료 (R²: 0.5562)
+  [SVR (POLY)] 튜닝 중... 완료 (R²: 0.4652)
+  [NuSVR] 튜닝 중... 완료 (R²: 0.5563)
+  [KNN (k=5)] 튜닝 중... 완료 (R²: 0.5478)
+  [Decision Tree] 튜닝 중... 완료 (R²: 0.6497)
+  [Bagging (DT)] 튜닝 중... 완료 (R²: 0.6709)
+  [Random Forest] 튜닝 중... 완료 (R²: 0.6714)
+  [Extra Trees] 튜닝 중... 완료 (R²: 0.6295)
+  [AdaBoost] 튜닝 중... 완료 (R²: 0.6687)
+  [Gradient Boosting] 튜닝 중... 완료 (R²: 0.6562)
+  [HistGradientBoost] 튜닝 중... 완료 (R²: 0.6577)
+  [XGBoost (실제)] 튜닝 중... 완료 (R²: 0.6704)
+  [LightGBM (실제)] 튜닝 중... 완료 (R²: 0.6600)
+  [CatBoost (실제)] 튜닝 중... 완료 (R²: 0.6591)
+  → sec3_1_summary_visualization.png
+  → sec3_1_final_results.json
+  ✅ Step 11 완료 (55s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (55s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§4 Ensemble']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §4  Phase 3 — 고급 앙상블 (Stacking / Voting)
+═════════════════════════════════════════════════════════════════
+  기반 학습기 Top3: ['Gradient Boosting', 'Random Forest', 'AdaBoost']
+  Voting (Top3)                 : R²=0.6760±0.0257
+  Stacking (Top3→Ridge)         : R²=0.6762±0.0258
+  → sec4_leaderboard.png
+  → sec4_adv_results.json
+  → sec4_leaderboard.csv
+  ✅ Step 4 완료 (14s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (14s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+═════════════════════════════════════════════════════════════════
+  반도체 수율 예측 & XAI 분석 — 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+═════════════════════════════════════════════════════════════════
+실행: ['§5-7 진단/EDA비교/요약']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+═════════════════════════════════════════════════════════════════
+  §5–7  최종 모델 진단 / EDA 비교 / 종합 요약
+═════════════════════════════════════════════════════════════════
+  최종 모델: Gradient Boosting  Train R²=0.7342
+  7nm: R²=0.4427 (n=200)
+  10nm: R²=0.5210 (n=375)
+  14nm: R²=0.4546 (n=250)
+  22nm: R²=0.3815 (n=125)
+  28nm: R²=0.3800 (n=300)
+  → sec5_final_diagnostics.png
+  → sec6_eda_comparison.png
+  → sec7_final_summary.png
+  → model_meta.json
+  ✅ Step 5 완료 (14s)
+
+═════════════════════════════════════════════════════════════════
+  전체 완료 (14s)
+  figures: 26개  results: 13개
+  best_model.pkl ✅
+=================================================================
+  반도체 수율 예측 & XAI 분석 -- 완전 재현 파이프라인
+  XGBoost : XGBoost (실제)
+  LightGBM: LightGBM (실제)
+  CatBoost: CatBoost (실제)
+=================================================================
+실행: ['§1 EDA']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+=================================================================
+  §1  EDA 심층 분석 & 피처셋 설계
+=================================================================
+  이분화 t-test: t=35.08, p=3.61e-188
+  ANOVA:        F=307.48, p=5.53e-184
+  FS-A: R²=0.6615
+  FS-B: R²=0.6613
+  FS-C: R²=0.6661
+  FS-D: R²=0.6647
+  → sec1_eda_deep.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (8s)
+
+=================================================================
+  전체 완료 (8s)
+  figures: 26개  results: 13개
+  best_model.pkl OK

@@ -1,0 +1,150 @@
+═════════════════════════════════════════════════════════════════
+  노드 집중 분석 파이프라인  —  [7nm]
+  XGBoost : XGBoost
+  LightGBM: LightGBM
+  CatBoost: CatBoost
+═════════════════════════════════════════════════════════════════
+실행 단계: ['§1 EDA (노드 내부)', '§2 Baseline (23개)', '§3 Tuning', '§4 Ensemble', '§5 진단', '§6 EDA 비교', '§7 요약+XAI']
+
+▶ 데이터 로드 [7nm]...
+
+  노드 [7nm] 데이터: 200개
+  CV Folds: 5 (샘플 200개 기준)
+  피처셋: A=18개  B=17개  C=20개  D=23개
+  ※ 제외된 노드 상수 컬럼: ['tech_encoded', 'is_advanced_node', 'node_x_cd']
+  사용 피처셋: A=18  B=17  C=20  D=23
+
+═════════════════════════════════════════════════════════════════
+  §1  EDA — [7nm] 노드 내부 분석
+═════════════════════════════════════════════════════════════════
+
+  수율 통계: μ=0.5833  σ=0.1489  min=0.2919  max=0.9241  IQR=0.2197
+  Shapiro-Wilk: W=0.9775, p=0.0027 (비정규 α=0.05)
+  FS-A: R²=0.1779
+  FS-B: R²=0.1766
+  FS-C: R²=0.1721
+  FS-D: R²=0.1637
+  다중공선성 쌍 (|r|>0.8): 3개
+  → sec1_eda_7nm.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (5s)
+
+═════════════════════════════════════════════════════════════════
+  §2  Phase 1 — [7nm] 베이스라인 스크리닝 (23개 모델)
+═════════════════════════════════════════════════════════════════
+
+  Model                          R² mean   R² std     RMSE
+  ──────────────────────────────────────────────────────────
+  Linear Regression               0.0249   0.1933   0.1435
+  Ridge                           0.0522   0.1996   0.1413
+  Lasso                           0.0642   0.1874   0.1405
+  ElasticNet                      0.0546   0.1940   0.1412
+  PLS (n=5)                       0.0457   0.2024   0.1418
+  Huber                          -0.0563   0.2118   0.1493
+  Bayesian Ridge                  0.1114   0.1189   0.1376
+  TheilSen                       -0.1692   0.2996   0.1565
+  Kernel Ridge                   -0.5812   0.2009   0.1845
+  RANSAC+Ridge                   -0.2646   0.3371   0.1624
+  SVR (RBF)                       0.0369   0.1135   0.1432
+  NuSVR                          -0.2026   0.1188   0.1603
+  KNN (k=5)                      -0.0508   0.1158   0.1497
+  MLP (128-64)                   -0.8400   0.3516   0.1983
+  Decision Tree                  -0.3926   0.2183   0.1716
+  Bagging (DT)                    0.2122   0.0682   0.1297
+  Random Forest                   0.1964   0.0801   0.1308
+  Extra Trees                     0.1393   0.0877   0.1356
+  AdaBoost                        0.1803   0.0783   0.1323
+  Gradient Boosting               0.1164   0.1233   0.1371
+  XGBoost                         0.1197   0.1341   0.1367
+  LightGBM                        0.0807   0.1153   0.1398
+  CatBoost                        0.1591   0.0901   0.1342
+  → sec2_baseline_7nm.png
+  → phase1_results.csv
+  → sec2_phase1.json
+  ✅ Step 2 완료 (27s)
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — [7nm] 하이퍼파라미터 튜닝
+═════════════════════════════════════════════════════════════════
+
+  Baseline R²:
+    Random Forest                   : 0.1964
+    AdaBoost                        : 0.1803
+    CatBoost                        : 0.1591
+    XGBoost                         : 0.1197
+    Gradient Boosting               : 0.1164
+    LightGBM                        : 0.0807
+
+  [Gradient Boosting] Baseline=0.1164 (n_iter=30)... search=0.1770  5CV=0.2211±0.0568  [5s]
+    best_params: {'subsample': 0.7, 'n_estimators': 200, 'min_samples_leaf': 1, 'max_features': 0.7, 'max_depth': 2, 'learning_rate': 0.01}
+
+  [Random Forest] Baseline=0.1964 (n_iter=25)... search=0.1954  5CV=0.2019±0.0685  [7s]
+    best_params: {'n_estimators': 100, 'min_samples_split': 5, 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': 4}
+  → sec3_tuning_results.json
+  → sec3_tuning_7nm.png
+  ✅ Step 3 완료 (16s)
+
+═════════════════════════════════════════════════════════════════
+  §4  Phase 3 — [7nm] 고급 앙상블
+═════════════════════════════════════════════════════════════════
+  기반 학습기 Top3: ['Gradient Boosting', 'Random Forest']
+  Voting (Top3)                 : R²=0.2155±0.0610
+  Stacking (Top3→Ridge)         : R²=0.1436±0.0356
+  → sec4_leaderboard_7nm.png
+  → sec4_adv_results.json
+  → sec4_leaderboard.csv
+  ✅ Step 4 완료 (4s)
+
+═════════════════════════════════════════════════════════════════
+  §5  최종 모델 진단 — [7nm]
+═════════════════════════════════════════════════════════════════
+  최종 모델: Gradient Boosting
+  Train R²=0.4697  CV R²=0.2211
+  잔차: μ=-0.0003  σ=0.1085  Shapiro p=0.0001
+  → sec5_diagnostics_7nm.png
+  ✅ Step 5 완료 (2s)
+
+═════════════════════════════════════════════════════════════════
+  §6  EDA 피처셋 반영 효과 비교 — [7nm]
+═════════════════════════════════════════════════════════════════
+
+  피처셋별 R² [7nm]:
+                A-원본   B-EDA제거  C-EDA+FE★
+Model                                    
+Best Model  0.228347  0.232432   0.221053
+RF          0.201419  0.204710   0.198752
+  → sec6_feature_compare_7nm.png
+  ✅ Step 6 완료 (7s)
+
+═════════════════════════════════════════════════════════════════
+  §7  최종 선정 요약 — [7nm]
+═════════════════════════════════════════════════════════════════
+
+  ★ Best Model: Gradient Boosting
+  CV R²=0.2211  std=0.0568
+  RMSE=0.1292  MAE=0.1108
+  best_params: {'subsample': 0.7, 'n_estimators': 200, 'min_samples_leaf': 1, 'max_features': 0.7, 'max_depth': 2, 'learning_rate': 0.01}
+
+  XAI: Permutation Importance 계산 중... 완료
+
+  [7nm] XAI 상위 피처:
+     1. vth                       0.9876  ████████████████████████
+     2. thickness_uniformity      0.5969  ██████████████
+     3. uniformity_x_defect       0.4386  ██████████
+     4. cd_vth_product            0.3870  █████████
+     5. defect_composite          0.3642  █████████
+     6. defect_count              0.3229  ████████
+     7. pressure                  0.1564  ███
+     8. critical_dimension        0.1542  ███
+  → sec7_summary_7nm.png
+  → xai_results_7nm.csv
+  → model_meta.json
+  ✅ Step 7 완료 (2s)
+
+═════════════════════════════════════════════════════════════════
+  [7nm] 분석 완료 (62s)
+  출력 디렉토리: output_7nm/
+  figures : 7개
+  results : 8개
+  best_model_7nm.pkl : ✅
+═════════════════════════════════════════════════════════════════

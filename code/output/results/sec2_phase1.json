@@ -1,0 +1,233 @@
+{
+  "results": {
+    "Linear Regression": {
+      "R2_mean": 0.5688488281614948,
+      "R2_std": 0.005214873413906309,
+      "RMSE": 0.1149796439934691,
+      "MAE": 0.09271838139457365,
+      "category": "linear",
+      "use_std": true
+    },
+    "Ridge": {
+      "R2_mean": 0.5694321582698223,
+      "R2_std": 0.006529703450367997,
+      "RMSE": 0.11490403389090822,
+      "MAE": 0.09261278243694257,
+      "category": "linear",
+      "use_std": true
+    },
+    "Lasso": {
+      "R2_mean": 0.5691614709271826,
+      "R2_std": 0.010780907260635422,
+      "RMSE": 0.1149499264281843,
+      "MAE": 0.09255874763362659,
+      "category": "linear",
+      "use_std": true
+    },
+    "ElasticNet": {
+      "R2_mean": 0.5688636036961578,
+      "R2_std": 0.009658632282275757,
+      "RMSE": 0.11498606354962618,
+      "MAE": 0.09254945878074662,
+      "category": "linear",
+      "use_std": true
+    },
+    "PLS (n=8)": {
+      "R2_mean": 0.5679192974380671,
+      "R2_std": 0.008173124762688628,
+      "RMSE": 0.11509828213656069,
+      "MAE": 0.09266449231815505,
+      "category": "linear",
+      "use_std": true
+    },
+    "PCR (PCA+Ridge)": {
+      "R2_mean": 0.5503328722295198,
+      "R2_std": 0.010449631632128364,
+      "RMSE": 0.11742250744566413,
+      "MAE": 0.094241347076983,
+      "category": "linear",
+      "use_std": true
+    },
+    "Huber Regressor": {
+      "R2_mean": 0.5642444136473964,
+      "R2_std": 0.006661202880724229,
+      "RMSE": 0.11558372167772142,
+      "MAE": 0.09279553686144261,
+      "category": "robust",
+      "use_std": true
+    },
+    "Bayesian Ridge": {
+      "R2_mean": 0.5685284309946386,
+      "R2_std": 0.009716504427765674,
+      "RMSE": 0.11503020858070814,
+      "MAE": 0.09256572842146109,
+      "category": "robust",
+      "use_std": true
+    },
+    "TheilSen": {
+      "R2_mean": 0.5066692084846528,
+      "R2_std": 0.033767389062094116,
+      "RMSE": 0.12288372411040566,
+      "MAE": 0.09820948767304909,
+      "category": "robust",
+      "use_std": true
+    },
+    "Kernel Ridge (RBF)": {
+      "R2_mean": 0.45903956685868363,
+      "R2_std": 0.07029117175649618,
+      "RMSE": 0.12880240323654865,
+      "MAE": 0.09940045993174558,
+      "category": "robust",
+      "use_std": true
+    },
+    "RANSAC + Ridge": {
+      "R2_mean": 0.5514607613998594,
+      "R2_std": 0.01178274403474515,
+      "RMSE": 0.11727325615164383,
+      "MAE": 0.09380244160136167,
+      "category": "robust",
+      "use_std": true
+    },
+    "Quantile (Q=0.1)": {
+      "R2_mean": -0.1364678589833736,
+      "R2_std": 0.060044046925776945,
+      "RMSE": 0.18659674470035187,
+      "MAE": 0.1457372324825808,
+      "category": "robust",
+      "use_std": true
+    },
+    "SVR (RBF)": {
+      "R2_mean": 0.5005209029060953,
+      "R2_std": 0.035953781485194784,
+      "RMSE": 0.12380703290723162,
+      "MAE": 0.0982689095421591,
+      "category": "nonlinear",
+      "use_std": true
+    },
+    "SVR (POLY)": {
+      "R2_mean": 0.3445155650592599,
+      "R2_std": 0.04530641219403712,
+      "RMSE": 0.1417446577197347,
+      "MAE": 0.10990090599868647,
+      "category": "nonlinear",
+      "use_std": true
+    },
+    "NuSVR": {
+      "R2_mean": 0.44484562034194025,
+      "R2_std": 0.04054002420347075,
+      "RMSE": 0.13053389019415654,
+      "MAE": 0.10282526954349806,
+      "category": "nonlinear",
+      "use_std": true
+    },
+    "KNN (k=5)": {
+      "R2_mean": 0.4798585027675972,
+      "R2_std": 0.028029222351346517,
+      "RMSE": 0.12618204336841055,
+      "MAE": 0.10004661645339379,
+      "category": "nonlinear",
+      "use_std": true
+    },
+    "MLP (128-64)": {
+      "R2_mean": 0.268827731952188,
+      "R2_std": 0.03205545217489757,
+      "RMSE": 0.14964816623801552,
+      "MAE": 0.11822998529850333,
+      "category": "nonlinear",
+      "use_std": true
+    },
+    "Decision Tree": {
+      "R2_mean": 0.5054909926834669,
+      "R2_std": 0.04379002636225292,
+      "RMSE": 0.12321998695257176,
+      "MAE": 0.09488924413614798,
+      "category": "tree",
+      "use_std": false
+    },
+    "Bagging (DT)": {
+      "R2_mean": 0.6686360283592767,
+      "R2_std": 0.028145544114998693,
+      "RMSE": 0.10076383129490019,
+      "MAE": 0.0827701069614488,
+      "category": "ensemble",
+      "use_std": false
+    },
+    "Random Forest": {
+      "R2_mean": 0.6608554261514161,
+      "R2_std": 0.02460536457335732,
+      "RMSE": 0.10195234255324118,
+      "MAE": 0.08390686574404874,
+      "category": "ensemble",
+      "use_std": false
+    },
+    "Extra Trees": {
+      "R2_mean": 0.6245552965368677,
+      "R2_std": 0.02226725664644106,
+      "RMSE": 0.10729851573424766,
+      "MAE": 0.08754420895061099,
+      "category": "ensemble",
+      "use_std": false
+    },
+    "AdaBoost": {
+      "R2_mean": 0.6634432196671092,
+      "R2_std": 0.029205300536957347,
+      "RMSE": 0.10158364860352903,
+      "MAE": 0.08422561552538624,
+      "category": "ensemble",
+      "use_std": false
+    },
+    "Gradient Boosting": {
+      "R2_mean": 0.6641538801795039,
+      "R2_std": 0.022623279503102448,
+      "RMSE": 0.10145688459945924,
+      "MAE": 0.08284130957472827,
+      "category": "boosting",
+      "use_std": false
+    },
+    "HistGradientBoost": {
+      "R2_mean": 0.6294645587122767,
+      "R2_std": 0.03451413807330272,
+      "RMSE": 0.10653099823994108,
+      "MAE": 0.0870283145718113,
+      "category": "boosting",
+      "use_std": false
+    },
+    "XGBoost (\uc2e4\uc81c)": {
+      "R2_mean": 0.6461857716298612,
+      "R2_std": 0.03102009977061081,
+      "RMSE": 0.10409388928346575,
+      "MAE": 0.08505993425140095,
+      "category": "boosting",
+      "use_std": false
+    },
+    "LightGBM (\uc2e4\uc81c)": {
+      "R2_mean": 0.6298193703562958,
+      "R2_std": 0.02907410132842366,
+      "RMSE": 0.10647294156038718,
+      "MAE": 0.08733110240480438,
+      "category": "boosting",
+      "use_std": false
+    },
+    "CatBoost (\uc2e4\uc81c)": {
+      "R2_mean": 0.6571370262992537,
+      "R2_std": 0.0244934452922018,
+      "RMSE": 0.10253499789313,
+      "MAE": 0.08443065660314052,
+      "category": "boosting",
+      "use_std": false
+    }
+  },
+  "cat_avg": {
+    "ensemble": 0.6543724926786674,
+    "boosting": 0.6453521214354383,
+    "linear": 0.5657597051203741,
+    "tree": 0.5054909926834669,
+    "robust": 0.4189124204003096,
+    "nonlinear": 0.40771366460541614
+  },
+  "lib_status": {
+    "xgb": "XGBoost (\uc2e4\uc81c)",
+    "lgb": "LightGBM (\uc2e4\uc81c)",
+    "cb": "CatBoost (\uc2e4\uc81c)"
+  }
+}

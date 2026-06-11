@@ -1,0 +1,177 @@
+=================================================================
+  반도체 수율 예측 & XAI 분석 -- 완전 재현 파이프라인
+  XGBoost : XGBoost
+  LightGBM: LightGBM
+  CatBoost: CatBoost
+=================================================================
+실행: ['Step1 EDA', 'Step2 Baseline(26모델)', 'Step3 Tuning+best_params', 'Step4 Ensemble', 'Step5-7 진단/EDA비교/요약', 'XAI', '$3-1 모든 model tuning']
+
+▶ 데이터 로드...
+  1250행 × 37열  /  FS-C:23개  FS-D:26개
+
+=================================================================
+  Step1  EDA 심층 분석 & 피처셋 설계
+=================================================================
+  t-test: t=35.08, p=3.61e-188
+  ANOVA:        F=307.48, p=5.53e-184
+  FS-A: R²=0.6615
+  FS-B: R²=0.6613
+  FS-C: R²=0.6661
+  FS-D: R²=0.6647
+  → sec1_eda_deep.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (10s)
+
+=================================================================
+  Step2  Phase 1 — Baseline model screening (26개 모델)
+=================================================================
+
+  Model                            R² mean   R² std     RMSE         Cat
+  ------------------------------------------------------------------------
+  Linear Regression                 0.5688   0.0052   0.1150      linear
+  Ridge                             0.5694   0.0066   0.1149      linear
+  Lasso                             0.5691   0.0107   0.1150      linear
+  ElasticNet                        0.5688   0.0096   0.1150      linear
+  PLS (n=8)                         0.5679   0.0082   0.1151      linear
+  PCR (PCA+Ridge)                   0.5503   0.0104   0.1174      linear
+  SVR (linear)                      0.5683   0.0079   0.1150      linear
+  Huber Regressor                   0.5642   0.0067   0.1156      robust
+  TheilSen                          0.5067   0.0338   0.1229      robust
+  RANSAC + Ridge                    0.5502   0.0121   0.1174      robust
+  Bayesian Ridge                    0.5685   0.0097   0.1150      robust
+  Kernel Ridge (RBF)                0.4575   0.0719   0.1290      robust
+  SVR (RBF)                         0.4999   0.0365   0.1239   nonlinear
+  SVR (POLY)                        0.3380   0.0477   0.1425   nonlinear
+  NuSVR                             0.4434   0.0399   0.1307   nonlinear
+  KNN (k=5)                         0.4758   0.0246   0.1267   nonlinear
+  Decision Tree                     0.5055   0.0438   0.1232        tree
+  Bagging (DT)                      0.6686   0.0281   0.1008    ensemble
+  Random Forest                     0.6608   0.0245   0.1020    ensemble
+  Extra Trees                       0.6246   0.0236   0.1073    ensemble
+  AdaBoost                          0.6640   0.0293   0.1015    ensemble
+  Gradient Boosting                 0.6639   0.0229   0.1015    boosting
+  HistGradientBoost                 0.6295   0.0345   0.1065    boosting
+  XGBoost                           0.6462   0.0310   0.1041    boosting
+  LightGBM                          0.6292   0.0329   0.1066    boosting
+  CatBoost                          0.6571   0.0245   0.1025    boosting
+  → sec2_phase1_screening.png
+  → phase1_results.csv
+  → sec2_phase1.json
+  ✅ Step 2 완료 (20s)
+
+=================================================================
+  Step3  Phase 2 — 하이퍼파라미터 튜닝 (RandomizedSearchCV)
+=================================================================
+
+  Phase1 Baseline R²:
+    AdaBoost                          : 0.6640
+    Gradient Boosting                 : 0.6639
+    Random Forest                     : 0.6608
+    HistGradientBoost                 : 0.6295
+    Extra Trees                       : 0.6246
+
+  [Gradient Boosting] Baseline=0.6639 → Search (n_iter=40)... search=0.6663  5CV=0.6751±0.0227  [21s]
+    best_params: {'model__subsample': 0.9, 'model__n_estimators': 200, 'model__min_samples_leaf': 4, 'model__max_features': 0.9, 'model__max_depth': 2, 'model__learning_rate': 0.03}
+
+  [Extra Trees] Baseline=0.6246 → Search (n_iter=25)... search=0.6138  5CV=0.6266±0.0153  [11s]
+    best_params: {'model__n_estimators': 300, 'model__min_samples_split': 2, 'model__min_samples_leaf': 2, 'model__max_features': 0.7, 'model__max_depth': 8, 'model__bootstrap': False}
+
+  [HistGradientBoost] Baseline=0.6295 → Search (n_iter=25)... search=0.6486  5CV=0.6556±0.0367  [9s]
+    best_params: {'model__min_samples_leaf': 10, 'model__max_iter': 100, 'model__max_depth': 3, 'model__max_bins': 255, 'model__learning_rate': 0.1, 'model__l2_regularization': 0.0}
+
+  [Random Forest] Baseline=0.6608 → Search (n_iter=40)... search=0.6561  5CV=0.6721±0.0242  [35s]
+    best_params: {'model__n_estimators': 200, 'model__min_samples_split': 5, 'model__min_samples_leaf': 4, 'model__max_features': 0.5, 'model__max_depth': 5, 'model__bootstrap': True}
+
+  [AdaBoost] Baseline=0.6640 → Search (n_iter=25)... search=0.6558  5CV=0.6703±0.0286  [21s]
+    best_params: {'model__n_estimators': 200, 'model__loss': 'linear', 'model__learning_rate': 0.1}
+  → sec3_tuning_results.json
+  → sec3a_tuning_comparison.png
+  → sec3b_learning_curve.png
+  ✅ Step 3 완료 (117s)
+
+=================================================================
+  Step4  Phase 3 — 앙상블 (Stacking / Voting)
+=================================================================
+  Base 학습기 Top3: ['Gradient Boosting', 'Random Forest', 'AdaBoost']
+  Voting (Top3)                 : R²=0.6764±0.0249
+  Stacking (Top3→Ridge)         : R²=0.6766±0.0252
+  → sec4_leaderboard.png
+  → sec4_adv_results.json
+  → sec4_leaderboard.csv
+  ✅ Step 4 완료 (12s)
+
+=================================================================
+  Step5–7  최종 모델 평가 / EDA 비교 / 종합 요약
+=================================================================
+  최종 모델: Gradient Boosting  Train R²=0.7342
+  7nm: R²=0.4427 (n=200)
+  10nm: R²=0.5210 (n=375)
+  14nm: R²=0.4546 (n=250)
+  22nm: R²=0.3815 (n=125)
+  28nm: R²=0.3800 (n=300)
+  → sec5_final_diagnostics.png
+  → sec6_eda_comparison.png
+  → sec7_final_summary.png
+  → model_meta.json
+  ✅ Step 5 완료 (18s)
+
+=================================================================
+  XAI — 6-Method Voting 유의인자 추출 (Multi-Seed Averaging)
+=================================================================
+  [Seed 42] 모델 학습 및 중요도 계산 중... 완료
+  [Seed 43] 모델 학습 및 중요도 계산 중... 완료
+  [Seed 44] 모델 학습 및 중요도 계산 중... 완료
+  [5/5] Pearson |r| 계산 완료
+
+  상위 10개:
+   1. critical_dimension        0.8449  █████████████████████████
+   2. is_advanced_node          0.3556  ██████████
+   3. vth                       0.2642  ███████
+   4. oxide_thickness           0.2336  ███████
+   5. Swing                     0.1116  ███
+   6. node_x_cd                 0.0920  ██
+   7. defect_composite          0.0898  ██
+   8. thickness_uniformity      0.0814  ██
+   9. defect_count              0.0672  ██
+  10. resistance                0.0623  █
+  → xai_voting.png
+  → xai_results.csv
+  ✅ Step 7 완료 (277s)
+
+=================================================================
+  Step3-1. Phase 2 — 26개 모든 모델 하이퍼파라미터 통합 튜닝 및 성능 비교
+=================================================================
+  [Linear Regression] 튜닝 중... 완료 (R²: 0.5688)
+  [Ridge] 튜닝 중... 완료 (R²: 0.5690)
+  [Lasso] 튜닝 중... 완료 (R²: 0.5691)
+  [ElasticNet] 튜닝 중... 완료 (R²: 0.5701)
+  [PLS (n=8)] 튜닝 중... 완료 (R²: 0.5679)
+  [PCR (PCA+Ridge)] 튜닝 중... 완료 (R²: 0.5514)
+  [SVR (linear)] 튜닝 중... 완료 (R²: 0.5683)
+  [Huber Regressor] 튜닝 중... 완료 (R²: 0.5661)
+  [TheilSen] 튜닝 중... 완료 (R²: 0.5320)
+  [RANSAC + Ridge] 튜닝 중... 완료 (R²: 0.5517)
+  [Bayesian Ridge] 튜닝 중... 완료 (R²: 0.5685)
+  [Kernel Ridge (RBF)] 튜닝 중... 완료 (R²: 0.5692)
+  [SVR (RBF)] 튜닝 중... 완료 (R²: 0.5562)
+  [SVR (POLY)] 튜닝 중... 완료 (R²: 0.4652)
+  [NuSVR] 튜닝 중... 완료 (R²: 0.5563)
+  [KNN (k=5)] 튜닝 중... 완료 (R²: 0.5478)
+  [Decision Tree] 튜닝 중... 완료 (R²: 0.6497)
+  [Bagging (DT)] 튜닝 중... 완료 (R²: 0.6709)
+  [Random Forest] 튜닝 중... 완료 (R²: 0.6715)
+  [Extra Trees] 튜닝 중... 완료 (R²: 0.6298)
+  [AdaBoost] 튜닝 중... 완료 (R²: 0.6703)
+  [Gradient Boosting] 튜닝 중... 완료 (R²: 0.6562)
+  [HistGradientBoost] 튜닝 중... 완료 (R²: 0.6577)
+  [XGBoost] 튜닝 중... 완료 (R²: 0.6704)
+  [LightGBM] 튜닝 중... 완료 (R²: 0.6606)
+  [CatBoost] 튜닝 중... 완료 (R²: 0.6591)
+  → sec3_1_summary_visualization.png
+  → sec3_1_final_results.json
+  ✅ Step 11 완료 (72s)
+
+=================================================================
+  전체 완료 (525s)
+  figures: 10개  results: 9개
+  best_model.pkl OK

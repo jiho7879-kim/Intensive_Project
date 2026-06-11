@@ -1,0 +1,147 @@
+═════════════════════════════════════════════════════════════════
+  노드 집중 분석 파이프라인  —  [22nm]
+  XGBoost : XGBoost
+  LightGBM: LightGBM
+  CatBoost: CatBoost
+═════════════════════════════════════════════════════════════════
+실행 단계: ['§1 EDA (노드 내부)', '§2 Baseline (23개)', '§3 Tuning', '§4 Ensemble', '§5 진단', '§6 EDA 비교', '§7 요약+XAI']
+
+▶ 데이터 로드 [22nm]...
+
+  노드 [22nm] 데이터: 125개
+  CV Folds: 5 (샘플 125개 기준)
+  피처셋: A=18개  B=17개  C=20개  D=23개
+  ※ 제외된 노드 상수 컬럼: ['tech_encoded', 'is_advanced_node', 'node_x_cd']
+  사용 피처셋: A=18  B=17  C=20  D=23
+
+═════════════════════════════════════════════════════════════════
+  §1  EDA — [22nm] 노드 내부 분석
+═════════════════════════════════════════════════════════════════
+
+  수율 통계: μ=0.3401  σ=0.0917  min=0.1811  max=0.6176  IQR=0.1246
+  Shapiro-Wilk: W=0.9615, p=0.0013 (비정규 α=0.05)
+  FS-A: R²=-0.1380
+  FS-B: R²=-0.1112
+  FS-C: R²=-0.1241
+  FS-D: R²=-0.1225
+  다중공선성 쌍 (|r|>0.8): 3개
+  → sec1_eda_22nm.png
+  → sec1_eda.json
+  ✅ Step 1 완료 (2s)
+
+═════════════════════════════════════════════════════════════════
+  §2  Phase 1 — [22nm] 베이스라인 스크리닝 (23개 모델)
+═════════════════════════════════════════════════════════════════
+
+  Model                          R² mean   R² std     RMSE
+  ──────────────────────────────────────────────────────────
+  Linear Regression              -0.1062   0.1662   0.0916
+  Ridge                          -0.0503   0.1245   0.0896
+  Lasso                          -0.0287   0.1199   0.0886
+  ElasticNet                     -0.0405   0.1234   0.0891
+  PLS (n=5)                      -0.0581   0.1320   0.0898
+  Huber                          -0.1749   0.1940   0.0945
+  Bayesian Ridge                  0.0177   0.1266   0.0866
+  TheilSen                       -0.2504   0.1711   0.0969
+  Kernel Ridge                   -1.3933   0.8623   0.1319
+  RANSAC+Ridge                   -0.5271   0.1777   0.1070
+  SVR (RBF)                       0.0316   0.1538   0.0859
+  NuSVR                          -0.2101   0.1023   0.0958
+  KNN (k=5)                      -0.1626   0.2281   0.0929
+  MLP (128-64)                   -2.5620   1.2882   0.1607
+  Decision Tree                  -1.0335   0.5758   0.1235
+  Bagging (DT)                   -0.0709   0.2451   0.0903
+  Random Forest                  -0.0872   0.2445   0.0908
+  Extra Trees                    -0.0631   0.1850   0.0902
+  AdaBoost                       -0.1582   0.2365   0.0950
+  Gradient Boosting              -0.2399   0.2422   0.0964
+  XGBoost                        -0.1771   0.1493   0.0948
+  LightGBM                       -0.2189   0.1568   0.0954
+  CatBoost                       -0.0497   0.1254   0.0893
+  → sec2_baseline_22nm.png
+  → phase1_results.csv
+  → sec2_phase1.json
+  ✅ Step 2 완료 (12s)
+
+═════════════════════════════════════════════════════════════════
+  §3  Phase 2 — [22nm] 하이퍼파라미터 튜닝
+═════════════════════════════════════════════════════════════════
+
+  Baseline R²:
+    CatBoost                        : -0.0497
+    Random Forest                   : -0.0872
+    AdaBoost                        : -0.1582
+    XGBoost                         : -0.1771
+    LightGBM                        : -0.2189
+    Gradient Boosting               : -0.2399
+
+  [Gradient Boosting] Baseline=-0.2399 (n_iter=18)... search=0.0689  5CV=0.0094±0.1582  [1s]
+    best_params: {'subsample': 0.7, 'n_estimators': 200, 'min_samples_leaf': 1, 'max_features': 0.7, 'max_depth': 2, 'learning_rate': 0.01}
+
+  [Random Forest] Baseline=-0.0872 (n_iter=15)... search=0.0747  5CV=-0.0359±0.1666  [2s]
+    best_params: {'n_estimators': 200, 'min_samples_split': 5, 'min_samples_leaf': 2, 'max_features': 'sqrt', 'max_depth': 4}
+  → sec3_tuning_results.json
+  → sec3_tuning_22nm.png
+  ✅ Step 3 완료 (4s)
+
+═════════════════════════════════════════════════════════════════
+  §4  Phase 3 — [22nm] 고급 앙상블
+═════════════════════════════════════════════════════════════════
+  기반 학습기 Top3: ['Gradient Boosting', 'Random Forest']
+  Voting (Top3)                 : R²=-0.0084±0.1582
+  Stacking (Top3→Ridge)         : R²=-0.0949±0.1205
+  → sec4_leaderboard_22nm.png
+  → sec4_adv_results.json
+  → sec4_leaderboard.csv
+  ✅ Step 4 완료 (3s)
+
+═════════════════════════════════════════════════════════════════
+  §5  최종 모델 진단 — [22nm]
+═════════════════════════════════════════════════════════════════
+  최종 모델: Gradient Boosting
+  Train R²=0.5206  CV R²=0.0094
+  잔차: μ=-0.0004  σ=0.0635  Shapiro p=0.0022
+  → sec5_diagnostics_22nm.png
+  ✅ Step 5 완료 (0s)
+
+═════════════════════════════════════════════════════════════════
+  §6  EDA 피처셋 반영 효과 비교 — [22nm]
+═════════════════════════════════════════════════════════════════
+
+  피처셋별 R² [22nm]:
+                A-원본   B-EDA제거  C-EDA+FE★
+Model                                    
+Best Model -0.008484  0.004672   0.009416
+RF         -0.072744 -0.069690  -0.079684
+  → sec6_feature_compare_22nm.png
+  ✅ Step 6 완료 (3s)
+
+═════════════════════════════════════════════════════════════════
+  §7  최종 선정 요약 — [22nm]
+═════════════════════════════════════════════════════════════════
+
+  ★ Best Model: Gradient Boosting
+  CV R²=0.0094  std=0.1582
+  RMSE=0.0871  MAE=0.0729
+  best_params: {'subsample': 0.7, 'n_estimators': 200, 'min_samples_leaf': 1, 'max_features': 0.7, 'max_depth': 2, 'learning_rate': 0.01}
+
+  XAI: Permutation Importance 계산 중... 완료
+
+  [22nm] XAI 상위 피처:
+     1. oxide_thickness           0.8124  ████████████████████
+     2. vth                       0.7881  ███████████████████
+     3. cd_vth_product            0.7521  ██████████████████
+     4. defect_count              0.5367  █████████████
+     5. defect_composite          0.4957  ████████████
+     6. uniformity_x_defect       0.4559  ███████████
+     7. thickness_uniformity      0.4076  ██████████
+     8. exposure_time             0.3680  █████████
+  ❌ Step 7 오류: only 0-dimensional arrays can be converted to Python scalars
+
+═════════════════════════════════════════════════════════════════
+  [22nm] 분석 완료 (23s)
+  출력 디렉토리: output_22nm/
+  figures : 6개
+  results : 6개
+  best_model_22nm.pkl : ✅
+═════════════════════════════════════════════════════════════════
