@@ -1,0 +1,2 @@
+Shop Customer Data
+https://www.kaggle.com/datasets/datascientistanna/customers-dataset

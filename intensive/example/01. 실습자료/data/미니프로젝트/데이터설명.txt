@@ -1,0 +1,32 @@
+피파 21 데이터
+https://www.kaggle.com/datasets/ekrembayar/fifa-21-complete-player-dataset
+
+Video Game Sales and Ratings
+https://www.kaggle.com/datasets/thedevastator/video-game-sales-and-ratings
+
+Online Chess Games
+https://www.kaggle.com/datasets/ulrikthygepedersen/online-chess-games
+
+CERN Electron Collision Data
+https://www.kaggle.com/datasets/fedesoriano/cern-electron-collision-data
+
+E-Commerce Data
+https://www.kaggle.com/datasets/carrie1/ecommerce-data
+
+Data Science Salaries 2023
+https://www.kaggle.com/datasets/arnabchaki/data-science-salaries-2023
+
+Shop Customer Data
+https://www.kaggle.com/datasets/datascientistanna/customers-dataset
+
+Semiconductor shortage
+https://www.kaggle.com/datasets/ramjasmaurya/semiconductor-shortages19852021
+
+UCI SECOM Dataset
+https://www.kaggle.com/datasets/paresh2047/uci-semcom
+
+Taiwan Semiconductor Manufacturing Co Ltd
+https://www.kaggle.com/datasets/nidzsharma/taiwan-semiconductor-manufacturing-co-ltd
+
+CPU and GPU Performances Dataset
+https://www.kaggle.com/datasets/michaelbryantds/cpu-and-gpu-product-data
